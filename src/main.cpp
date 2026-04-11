@@ -1,78 +1,47 @@
 /**
  * @file main.cpp
- * @brief Application entry: Win32 window creation and message pump.
- *
- * Rendering uses DirectX 9 with the fixed-function pipeline (see Graphics.cpp).
- * Math and transforms elsewhere should use left-handed conventions (e.g. D3DX*LH).
+ * @brief Win32 entry: window, message pump, fixed timestep, Game orchestration.
  */
 
 #include <windows.h>
 
+#include <algorithm>
+
 #include <d3dx9.h>
 
 #include "Camera.h"
+#include "Game.h"
 #include "Graphics.h"
-#include "ModelLoader.h"
 
 namespace {
 
-// Registered window class name (Unicode build: wchar_t strings).
 constexpr wchar_t kWindowClassName[] = L"PhysicsSandboxWindow";
 
 constexpr int kInitialClientWidth = 1280;
 constexpr int kInitialClientHeight = 720;
 
-// Repository layout: mesh lives under Assets/models/. (If you prefer Assets/model_jeep.x, copy or symlink there.)
-constexpr wchar_t kJeepModelPath[] = L"Assets/models/model_jeep.x";
-
-// Graphics is resized from WM_SIZE; we keep a pointer for the window procedure.
 Graphics* g_graphics = nullptr;
+Game* g_game = nullptr;
 
-/**
- * @brief One directional light + modest ambient so FFP-lit meshes are visible.
- */
-void ApplyDirectionalLight(IDirect3DDevice9* device) {
-    if (!device) {
-        return;
-    }
-
-    device->SetRenderState(D3DRS_LIGHTING, TRUE);
-    device->SetRenderState(D3DRS_NORMALIZENORMALS, TRUE);
-    device->SetRenderState(D3DRS_SPECULARENABLE, FALSE);
-    device->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_COLORVALUE(0.22f, 0.24f, 0.28f, 1.f));
-
-    D3DLIGHT9 light = {};
-    light.Type = D3DLIGHT_DIRECTIONAL;
-    light.Diffuse.r = light.Diffuse.g = light.Diffuse.b = 1.f;
-    light.Diffuse.a = 1.f;
-    // Direction (world space) in which light propagates — slightly from above and to the side.
-    light.Direction.x = -0.35f;
-    light.Direction.y = -0.85f;
-    light.Direction.z = 0.25f;
-    D3DXVec3Normalize(reinterpret_cast<D3DXVECTOR3*>(&light.Direction),
-                      reinterpret_cast<const D3DXVECTOR3*>(&light.Direction));
-
-    device->SetLight(0, &light);
-    device->LightEnable(0, TRUE);
-}
-
-/**
- * Standard Win32 window procedure: handles lifetime, sizing, and default behavior.
- */
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
     case WM_DESTROY:
-        // Signal WM_QUIT so the message loop exits.
         PostQuitMessage(0);
         return 0;
 
     case WM_SIZE:
-        // Resize buffers in place so MANAGED .x meshes from D3DXLoadMeshFromX stay valid.
         if (g_graphics && wParam != SIZE_MINIMIZED) {
             const int client_w = LOWORD(lParam);
             const int client_h = HIWORD(lParam);
             if (client_w > 0 && client_h > 0) {
+                IDirect3DDevice9* dev = g_graphics->Device();
+                if (g_game && dev) {
+                    g_game->OnLostDevice();
+                }
                 g_graphics->Resize(client_w, client_h);
+                if (g_game && dev) {
+                    g_game->OnResetDevice(dev);
+                }
             }
         }
         return 0;
@@ -84,11 +53,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 
 }  // namespace
 
-/**
- * Windows subsystem entry (Unicode). Creates the main window and runs the message loop.
- *
- * Idle time (no pending messages) is used to advance the simulation / present frames.
- */
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, PWSTR /*cmd_line*/,
                     int show_command) {
     WNDCLASSEXW wc = {};
@@ -103,14 +67,13 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, PWSTR /*cmd
         return 1;
     }
 
-    // Client size -> required window rectangle including non-client chrome.
     RECT window_rect = {0, 0, kInitialClientWidth, kInitialClientHeight};
     AdjustWindowRect(&window_rect, WS_OVERLAPPEDWINDOW, FALSE);
 
     HWND hwnd = CreateWindowExW(
         0,
         kWindowClassName,
-        L"3D Physics Sandbox — DirectX 9 (Fixed Function)",
+        L"MAEG4060 — Off-road terrain sandbox (DirectX 9)",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
@@ -132,48 +95,51 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, PWSTR /*cmd
         return 1;
     }
 
-    Camera camera;
-    ModelLoader jeep;
-    if (FAILED(jeep.LoadMeshFromX(graphics.Device(), kJeepModelPath)) || !jeep.IsLoaded()) {
+    Game game;
+    g_game = &game;
+    if (!game.Initialize(hwnd, graphics.Device())) {
+        g_game = nullptr;
         g_graphics = nullptr;
         graphics.Shutdown();
-        MessageBoxW(hwnd, L"Failed to load jeep .x mesh. Check working directory and path.", L"Model load error",
-                    MB_OK | MB_ICONERROR);
+        MessageBoxW(hwnd, L"Game initialization failed (assets or D3D).", L"Error", MB_OK | MB_ICONERROR);
         return 1;
     }
+
+    Camera camera;
+
+    LARGE_INTEGER freq{};
+    LARGE_INTEGER prev{};
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&prev);
 
     ShowWindow(hwnd, show_command);
     UpdateWindow(hwnd);
 
-    // Message pump: process Windows messages; when the queue is empty, run one frame.
     MSG msg = {};
     while (msg.message != WM_QUIT) {
         if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         } else {
-            IDirect3DDevice9* device = graphics.Device();
+            LARGE_INTEGER now{};
+            QueryPerformanceCounter(&now);
+            float dt = static_cast<float>(now.QuadPart - prev.QuadPart) / static_cast<float>(freq.QuadPart);
+            prev = now;
+            dt = (std::min)(dt, 0.05f);
+
+            game.Update(dt, graphics);
+
             graphics.BeginFrame();
-
             if (graphics.IsSceneActive()) {
-                camera.SetAspect(static_cast<float>(graphics.ClientWidth()),
-                                   static_cast<float>(graphics.ClientHeight()));
-                camera.ApplyViewProj(device);
-
-                D3DXMATRIX world;
-                D3DXMatrixIdentity(&world);
-                device->SetTransform(D3DTS_WORLD, &world);
-
-                device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
-                device->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
-
-                ApplyDirectionalLight(device);
-                jeep.Draw(device);
+                game.Render(graphics.Device(), camera, graphics.ClientWidth(), graphics.ClientHeight(),
+                            true);
             }
-
             graphics.EndFrame();
         }
     }
+
+    g_game = nullptr;
+    game.Shutdown();
 
     g_graphics = nullptr;
     graphics.Shutdown();

@@ -27,10 +27,28 @@
 \section{How to start the application}
 
 \begin{itemize}
-  \item Open the \texttt{Game\_Build} folder in your submission package.
-  \item \textbf{Double-click} the main application executable (\texttt{.exe}) in that folder to launch the program.
-  \item Keep the executable in the same folder structure as submitted so relative paths to assets (models, textures, heightmaps) resolve correctly. If the program reports missing files, run it from \texttt{Game\_Build} without moving only the \texttt{.exe} away from its data folders.
+  \item Open the \texttt{Game\_Build} folder in your submission package (or run from the repository root after a local build; see below).
+  \item \textbf{Double-click} \texttt{maeg4060\_stage2.exe} in that folder to launch the program.
+  \item Keep the executable beside the \texttt{Assets} folder so paths such as \texttt{Assets/models/model\_jeep.x} resolve. If models fail to load, confirm the working directory contains \texttt{Assets}.
 \end{itemize}
+
+\subsection{Building from source (optional)}
+
+The project is a CMake target (\texttt{maeg4060\_stage2}) that needs legacy \textbf{D3DX} headers and import libraries (\texttt{d3dx9.h}, \texttt{d3dx9math.h}, etc.), which are \emph{not} supplied by the Windows 10/11 SDK alone. CMake resolves them in one of two ways: (1)~set \texttt{DXSDK\_DIR} to the root of the \textbf{June 2010 DirectX SDK} (must contain \texttt{Include} and \texttt{Lib}); or (2)~leave \texttt{DXSDK\_DIR} unset and let CMake download the \texttt{Microsoft.DXSDK.D3DX} NuGet package into the build directory on first configure (requires network access; configure may take several minutes).
+
+\textbf{Recommended (matches \texttt{scripts/configure\_build\_release.bat}):} run \texttt{vcvars64.bat} from your Visual Studio installation so \texttt{cl} is on \texttt{PATH}, then from the repository root use the Ninja generator and select MSVC explicitly, for example:
+\begin{verbatim}
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_CXX_COMPILER=cl -DCMAKE_C_COMPILER=cl
+cmake --build build
+\end{verbatim}
+On some setups the Visual Studio CMake generator fails to detect a C++ compiler even after \texttt{vcvars64}; Ninja with \texttt{-DCMAKE\_CXX\_COMPILER=cl} avoids that. If you change the generator in an existing build tree, delete the \texttt{build} folder (or remove \texttt{CMakeCache.txt} and the \texttt{CMakeFiles} directory) before re-running \texttt{cmake}.
+
+If the compiler stops with \textbf{C1060} (out of heap space), retry the build with less parallelism, e.g.\ \texttt{cmake --build build -j 1}, and close other heavy applications.
+
+Alternatively, from the repository root: \texttt{cmake -B build -G "Visual Studio 17 2022" -A x64}, then \texttt{cmake --build build --config Release}, provided the toolset is detected correctly.
+
+To package binaries: run \texttt{scripts/package\_game\_build.bat} to populate \texttt{Game\_Build}, or \texttt{cmake --install build --prefix Game\_Build}.
 
 \section{Hardware and software requirements}
 
@@ -45,7 +63,7 @@
 
 \subsection{Keyboard (WASD and related keys)}
 
-Input is handled via the keyboard using a typical first-person / vehicle-style layout (DirectInput), for example:
+Input is handled via the Win32 keyboard API (\texttt{GetAsyncKeyState}) with a vehicle-style layout, for example:
 
 \begin{center}
 \begin{tabular}{@{}ll@{}}
@@ -55,7 +73,7 @@ Input is handled via the keyboard using a typical first-person / vehicle-style l
   W / S & Forward / reverse (throttle) \\
   A / D & Steer left / right \\
   Space & Brake (or hand brake, depending on build) \\
-  Esc & Quit or return (if implemented) \\
+  Esc & Quit application \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -74,8 +92,7 @@ With an XInput controller connected, the application maps analog axes and trigge
   \midrule
   Left stick & Steering \\
   Right trigger & Throttle (accelerate) \\
-  Left trigger & Brake / reverse (as implemented) \\
-  Start / Back & Pause or UI (if implemented) \\
+  Left trigger & Brake / partial reverse \\
   \bottomrule
 \end{tabular}
 \end{center}

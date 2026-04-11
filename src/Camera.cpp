@@ -1,5 +1,7 @@
 #include "Camera.h"
 
+#include <cmath>
+
 #include <d3dx9.h>
 
 Camera::Camera()
@@ -28,4 +30,13 @@ void Camera::ApplyViewProj(IDirect3DDevice9* device) const {
     }
     device->SetTransform(D3DTS_VIEW, &view_);
     device->SetTransform(D3DTS_PROJECTION, &proj_);
+}
+
+void Camera::SetChase(const D3DXVECTOR3& target, float yaw, float distance, float height,
+                      float look_ahead) {
+    const D3DXVECTOR3 fwd(std::sinf(yaw), 0.f, std::cosf(yaw));
+    D3DXVECTOR3 back = fwd * (-distance);
+    eye_ = target + back + D3DXVECTOR3(0.f, height, 0.f);
+    at_ = target + fwd * look_ahead + D3DXVECTOR3(0.f, height * 0.25f, 0.f);
+    RebuildView();
 }

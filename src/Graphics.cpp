@@ -1,11 +1,5 @@
 #include "Graphics.h"
 
-namespace {
-
-constexpr D3DCOLOR kClearColor = D3DCOLOR_XRGB(135, 206, 235);
-
-}  // namespace
-
 Graphics::~Graphics() {
     Shutdown();
 }
@@ -122,7 +116,7 @@ void Graphics::BeginFrame() {
         0,
         nullptr,
         D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER,
-        kClearColor,
+        clear_color_,
         1.0f,
         0);
     if (FAILED(hr)) {

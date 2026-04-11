@@ -35,6 +35,9 @@ public:
     /** True if the last BeginFrame() opened a scene (BeginScene succeeded). */
     bool IsSceneActive() const { return scene_active_; }
 
+    void SetClearColor(D3DCOLOR color) { clear_color_ = color; }
+    D3DCOLOR ClearColor() const { return clear_color_; }
+
 private:
     bool CreatePresentParameters(D3DPRESENT_PARAMETERS* out_pp) const;
 
@@ -45,4 +48,5 @@ private:
     IDirect3D9* d3d_ = nullptr;
     IDirect3DDevice9* d3d_device_ = nullptr;
     bool scene_active_ = false;
+    D3DCOLOR clear_color_ = D3DCOLOR_XRGB(135, 206, 235);
 };

@@ -29,6 +29,8 @@ public:
 
     void Draw(IDirect3DDevice9* device) const;
 
+    void Unload() { Release(); }
+
     bool IsLoaded() const { return mesh_ != nullptr; }
     ID3DXMesh* Mesh() const { return mesh_; }
     DWORD NumMaterials() const { return static_cast<DWORD>(materials_.size()); }

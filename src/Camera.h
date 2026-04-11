@@ -19,6 +19,10 @@ public:
     /** Apply D3DTS_VIEW and D3DTS_PROJECTION on the fixed-function pipeline. */
     void ApplyViewProj(IDirect3DDevice9* device) const;
 
+    /** Third-person camera behind vehicle heading. */
+    void SetChase(const D3DXVECTOR3& target, float yaw, float distance, float height,
+                  float look_ahead);
+
     const D3DXMATRIX& View() const { return view_; }
     const D3DXMATRIX& Projection() const { return proj_; }
 
