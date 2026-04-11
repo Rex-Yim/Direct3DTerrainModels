@@ -1,0 +1,302 @@
+% MAEG4060 — Final report (backbone)
+% Aligns with Project Description_25-26-3.pdf:
+%   (1) completed program — summarize in report; submit binary/source per course instructions
+%   (2) user guide
+%   (3) brief techniques + model sources and modifications
+% Final submission deadline (course): 17 April 2026
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{pdfpages}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage[hidelinks,breaklinks]{hyperref}
+
+\makeatletter
+\g@addto@macro\UrlBreaks{\do\/\do-\do\.\do\=}
+\makeatother
+
+\hypersetup{
+  pdftitle={MAEG4060 Final Report},
+  pdfauthor={Guo Tsun Hei; Yim Fu Chong}
+}
+
+\newcommand{\todo}[1]{\textit{[TODO: #1]}}
+
+\title{%
+  MAEG4060 Virtual Reality Systems and Applications\\
+  \large Course Project -- Final Report}
+\author{%
+  \parbox{0.92\linewidth}{\centering
+  \textbf{Project title:} Interactive Physical Simulation of Off-Road Vehicle Dynamics in a Mountainous Terrain\\[0.75em]
+  \textbf{Group members:}\\[0.35em]
+  Guo Tsun Hei (1155186272): 3D Modeling, Texturing, Rigging, and Animation\\
+  Yim Fu Chong (1155176974): Programming, Physics Engine, and System Integration}}
+\date{%
+  Submission date: 11 April 2026\\
+  Submission deadline: 17 April 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Brief summary of the interactive 3D environment (not a game: no missions or scoring), main interaction model, and how the submission satisfies the course requirements (DirectX~9.0c, Visual C++, keyboard/gamepad, physics). \textit{[Write 150--250 words when drafting.]}
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{Project scope}
+Describe the virtual environment theme and what the user can do. Relate this to the Stage~1 proposal and note any intentional changes from the original plan.
+
+\subsection{Alignment with course requirements}
+The application is implemented in \textbf{Visual C++} with \textbf{DirectX~9.0c}. It is a technical demonstration / sandbox (\textbf{not} a video game: no missions, no score). Input: \textbf{keyboard} and \textbf{gamepad}. The scene includes \textbf{physical simulation} (e.g.\ gravity, vehicle dynamics, terrain interaction, collisions).
+
+\subsection{Mapping to marking criteria (group project)}
+Table~\ref{tab:marking} lists Stage~3 items from the course project description; use the technical sections below to make each item easy for markers to find.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Where to address each marked component (typical section pointers --- adjust after writing).}
+  \label{tab:marking}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Component (weight)} & \textbf{See section} & \textbf{Notes} \\
+    \midrule
+    Gamepad / joystick (5\%) & \S\ref{sec:user-controls} & XInput / analog mapping \\
+    Model navigation (5\%) & \S\ref{sec:techniques-terrain} & Terrain following, camera or vehicle \\
+    Collision, static objects (10\%) & \S\ref{sec:techniques-collision} & e.g.\ AABB / spheres \\
+    Physics-based motion (10\%) & \S\ref{sec:techniques-physics} & Forces, integration, friction \\
+    Maya animation in VR (20\%, group) & \S\ref{sec:techniques-animation} & \texttt{.X} / \texttt{ID3DXAnimationController} etc. \\
+    User guide (5\%) & \S\ref{sec:user-guide} & Controls, requirements, run instructions \\
+    Report (15\%) & Whole document & Clarity, completeness \\
+    Bonus (10\%) & \S\ref{sec:bonus} & Moving-object collision, extra effects, \ldots \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\section{Completed application}
+\label{sec:application}
+
+\subsection{Feature overview}
+Enumerate implemented features (terrain, vehicle, props, day/night, HUD, audio if any, \ldots).
+
+\subsection{Executable and source layout}
+State what is submitted (e.g.\ Release executable, solution path, asset folders). Do not embed large binaries in the PDF; refer to the submission package.
+
+\begin{itemize}
+  \item Main entry point / project file: \texttt{\{e.g.\ main.cpp, .sln\}}
+  \item Key modules: \textit{\{list\}}
+  \item Asset pipeline: \textit{\{heightmap, textures, \texttt{.x} models\}}
+\end{itemize}
+
+\subsection{Screenshots}
+Include a few figures of the running application. Below: placeholders; replace with \verb|\includegraphics| when ready.
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\parbox[c][4.5cm][c]{0.88\linewidth}{\centering\small\textit{Screenshot: overall scene}}}
+  \caption{Caption the view (e.g.\ vehicle on terrain, time of day).}
+\end{figure}
+
+% ---------------------------------------------------------------------------
+\section{User guide}
+\label{sec:user-guide}
+
+\subsection{System requirements}
+OS version, DirectX / runtime expectations, display resolution, optional gamepad.
+
+\subsection{Installation and running}
+Steps to build (if source) or run the executable; working directory if assets must be beside the \texttt{.exe}.
+
+\subsection{Controls}
+\label{sec:user-controls}
+
+\subsubsection{Keyboard}
+\begin{tabular}{@{}ll@{}}
+  \toprule
+  \textbf{Input} & \textbf{Action} \\
+  \midrule
+  W / A / S / D & \textit{\{describe\}} \\
+  \ldots & \ldots \\
+  \bottomrule
+\end{tabular}
+
+\subsubsection{Gamepad}
+Describe XInput mapping: sticks, triggers, face buttons. Explain throttle / steer if applicable.
+
+\subsection{Troubleshooting}
+Common issues (missing DLL, assets not found, fullscreen, \ldots).
+
+% ---------------------------------------------------------------------------
+\section{Technical description}
+\label{sec:technical}
+
+This section summarizes the main techniques used in the DirectX~9.0c (fixed-function pipeline) implementation: terrain sampling, vehicle--terrain coupling, collision choices, animation, lighting, and environmental effects. The application is a physics sandbox (not a scored game).
+
+\subsection{Architecture overview}
+The real-time loop follows input $\rightarrow$ simulation $\rightarrow$ rendering: user input (keyboard via DirectInput, gamepad via XInput) drives vehicle and camera logic; the simulation updates positions, collisions, and animation time; Direct3D~9 draws the scene with depth buffering and texturing.
+
+\subsection{DirectX~9 rendering}
+The renderer uses a Direct3D~9 device with a depth--stencil buffer, textured meshes, and directional lighting. Meshes and animations are loaded from the \texttt{.X} format; the coordinate system is left-handed, consistent with \texttt{D3DXMatrixLookAtLH} and standard DirectX samples.
+
+\subsection{Terrain and model navigation}
+\label{sec:techniques-terrain}
+
+\subsubsection{Bilinear interpolation for terrain height}
+The terrain height at an arbitrary world position $(x,z)$ is obtained from a heightmap grid. To avoid discrete ``stair-stepping'' when the vehicle moves, the engine samples the four neighbouring heightmap texels and applies \textbf{bilinear interpolation}:
+\[
+h(x,z) = (1-t_x)(1-t_z)\,h_{00} + t_x(1-t_z)\,h_{10} + (1-t_x)t_z\,h_{01} + t_x t_z\,h_{11},
+\]
+where $t_x,t_z \in [0,1]$ are fractional coordinates within the cell. This yields a continuous height field suitable for stable contact and visual alignment.
+
+\subsubsection{Surface normal alignment}
+The vehicle's up vector is aligned with the \textbf{terrain surface normal}, computed from the local geometry (e.g.\ cross product of edges on the heightfield triangle under the vehicle). Pitch and roll follow the normal while yaw is driven by steering input, giving kinematic terrain-following without penetrating the mesh.
+
+\subsection{Animation}
+\label{sec:techniques-animation}
+\textbf{Maya keyframed} animation (e.g.\ windmill sails) is exported in the \texttt{.X} format and played with \texttt{ID3DXAnimationController}. Vehicle wheels use \textbf{procedural} rotation tied to simulated linear speed ($v \approx \omega r$) in addition to any exported hierarchy.
+
+\subsection{Collision detection and response}
+\label{sec:techniques-collision}
+
+\subsubsection{Axis-aligned bounding boxes (AABB)}
+\textbf{Rectangular props} (e.g.\ wooden crates) use \textbf{AABB} tests: fast intersection in world space along $x$, $y$, and $z$ extents. Response can slide or push the vehicle along the minimum penetration axis.
+
+\subsubsection{Bounding spheres}
+\textbf{Irregular objects} (e.g.\ boulders) use \textbf{bounding sphere} collision: distance between sphere centres compared to the sum of radii. Spheres are cheap to update when objects rotate or roll and pair well with impulse-based response for loose rocks.
+
+\subsubsection{Optional dynamic interaction}
+Where implemented, \textbf{dynamic-to-dynamic} contact allows the vehicle to impart momentum to loose boulders so they roll on slopes and interact with other objects (see \S\ref{sec:bonus}).
+
+\subsection{Physics and simulation}
+\label{sec:techniques-physics}
+Gravity is applied as a constant downward acceleration ($g \approx 9.81$ in engine units per second squared). The integrator updates linear velocity and position each frame; \textbf{rolling friction} and braking reduce speed when throttle is released.
+
+\subsection{Environmental effects}
+A \textbf{day/night cycle} can orbit the sun light using trigonometric functions and adjust clear colour and light colours for time of day. \textbf{Texture splatting} can blend grass and rock materials based on terrain slope (e.g.\ rock above a threshold angle). An on-screen HUD (\texttt{ID3DXFont}) may show speed, position, and cycle state.
+
+\subsection{Bonus work}
+\label{sec:bonus}
+\textbf{Dynamic-to-dynamic} collision and momentum transfer for loose boulders (and any other bonus items) are summarized here if implemented; if none, state ``No bonus features claimed.''
+
+% ---------------------------------------------------------------------------
+\section{3D models: sources and modifications}
+\label{sec:models}
+
+Per course requirements, external assets are listed with Sketchfab links and licenses (aligned with the Stage~1 proposal). \textbf{Modifications} should be updated to match what was actually done in Maya and the engine (retopo, materials, wheel hierarchy, scale, UVs, animation export, \ldots).
+
+\begingroup
+\sloppy
+\setlength{\emergencystretch}{4em}
+
+\begin{enumerate}
+  \item \textbf{Half Dome Terrain Landscape}
+    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
+      \item Author: Studio Lab
+      \item License: Creative Commons Attribution (CC BY 4.0)
+      \item Source: Sketchfab
+      \item URL: \url{https://sketchfab.com/3d-models/half-dome-terrain-landscape-86ef075dc7d9414583ac2180e1e651a3}
+      \item Usage: Reference for high-resolution terrain geometry and heightmap generation.
+      \item Modifications: \textit{\{describe: e.g.\ heightmap resolution, splatting masks, scale in world units\}}
+    \end{itemize}
+
+  \item \textbf{Controllable Vehicle (ATV)}
+    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
+      \item Title: ATV from game ``PURE''
+      \item Author: barking\_dogo
+      \item License: Creative Commons Attribution (CC BY 4.0)
+      \item Source: Sketchfab
+      \item URL: \url{https://sketchfab.com/3d-models/atv-from-game-pure-f2e454611ebd4151b9d7aa31815c35e4}
+      \item Usage: Main controllable vehicle model (wheel nodes separated for procedural animation).
+      \item Modifications: \textit{\{describe: e.g.\ hierarchy, textures, export to \texttt{.X}\}}
+    \end{itemize}
+
+  \item \textbf{Rock Boulder (Game Ready Asset)}
+    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
+      \item Author: Aparicio Silva 3D
+      \item License: Creative Commons Attribution (CC BY 4.0)
+      \item Source: Sketchfab
+      \item URL: \url{https://sketchfab.com/3d-models/rock-boulder-game-ready-asset-0079cb0e717c4aeebe6bca21ec21b0d9}
+      \item Usage: Dynamic physics / bounding-sphere collision.
+      \item Modifications: \textit{\{describe: e.g.\ scale, collision radius tuning\}}
+    \end{itemize}
+
+  \item \textbf{Windmill}
+    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
+      \item Author: KIFIR
+      \item License: Creative Commons Attribution (CC BY 4.0)
+      \item Source: Sketchfab
+      \item URL: \url{https://sketchfab.com/3d-models/windmill-fe13862b9e3c4dc887d10e297d86f17f}
+      \item Usage: Keyframed animation and environmental aesthetics.
+      \item Modifications: \textit{\{describe: e.g.\ Maya keyframes, \texttt{AnimationSet} in \texttt{.X}\}}
+    \end{itemize}
+
+  \item \textbf{Wooden Crate}
+    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
+      \item Author: Domingos Studios
+      \item License: Creative Commons Attribution (CC BY 4.0)
+      \item Source: Sketchfab
+      \item URL: \url{https://sketchfab.com/3d-models/wooden-crate-3c0259d17f3b4306890cdc809b545670}
+      \item Usage: Static collision (AABB).
+      \item Modifications: \textit{\{describe: e.g.\ placement, AABB extents\}}
+    \end{itemize}
+\end{enumerate}
+
+\endgroup
+
+% ---------------------------------------------------------------------------
+\section{Conclusion}
+\label{sec:conclusion}
+Lessons learned, known limitations, possible future work.
+
+% ---------------------------------------------------------------------------
+\section{References}
+\begingroup
+\sloppy
+\setlength{\emergencystretch}{4em}
+\begin{itemize}
+  \item Course project description (MAEG4060, 2025--26 Semester 2).
+  \item DirectX SDK / MSDN documentation.
+  \item External assets: cite consistently with \S\ref{sec:models}.
+\end{itemize}
+\endgroup
+
+\appendix
+
+\section{Appendix A: Build configuration}
+Compiler version, Windows SDK, preprocessor defines, Debug vs.\ Release notes.
+
+\section{Appendix B: Third-party libraries}
+If any (e.g.\ math helpers), list versions and licenses.
+
+\clearpage
+\phantomsection
+% Pull the appendix block up on the page (default \section spacing leaves a large gap).
+\vspace*{-4\baselineskip}
+\section{Appendix C: User Guide (standalone PDF)}
+\label{app:user-guide-pdf}
+\vspace{-2.5ex}
+\noindent
+The following pages reproduce the submitted user guide (\texttt{User\_Guide.pdf}): controls (keyboard and gamepad), hardware and software requirements, launch instructions, and troubleshooting.
+\par\vspace{0.75ex}
+% pdfpages always \clearpage before the first included page; relax it only for page 1 so the
+% first sheet follows the intro instead of leaving a title-only page. Remaining pages keep normal breaks.
+\begingroup
+\let\clearpage\relax
+\includepdf[pages=1,offset=0 -14bp]{User_Guide.pdf}
+\endgroup
+\includepdf[pages=2-,offset=0 -14bp]{User_Guide.pdf}
+
+\end{document}

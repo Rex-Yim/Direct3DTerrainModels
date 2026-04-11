@@ -1,0 +1,95 @@
+% MAEG4060 — User Guide (standalone PDF)
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage[hidelinks,breaklinks]{hyperref}
+
+\makeatletter
+\g@addto@macro\UrlBreaks{\do\/\do-\do\.\do\=}
+\makeatother
+
+\title{%
+  MAEG4060 Course Project\\
+  \large User Guide}
+\author{%
+  Interactive Physical Simulation of Off-Road Vehicle Dynamics\\
+  \small Guo Tsun Hei; Yim Fu Chong}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+\section{How to start the application}
+
+\begin{itemize}
+  \item Open the \texttt{Game\_Build} folder in your submission package.
+  \item \textbf{Double-click} the main application executable (\texttt{.exe}) in that folder to launch the program.
+  \item Keep the executable in the same folder structure as submitted so relative paths to assets (models, textures, heightmaps) resolve correctly. If the program reports missing files, run it from \texttt{Game\_Build} without moving only the \texttt{.exe} away from its data folders.
+\end{itemize}
+
+\section{Hardware and software requirements}
+
+\begin{itemize}
+  \item \textbf{Platform:} Windows PC (64-bit Windows recommended).
+  \item \textbf{Graphics API:} The application uses \textbf{DirectX~9.0c}. You need a DirectX~9-compatible GPU and the \textbf{DirectX~9 End-User Runtime} (or equivalent system components) installed as required by your Windows version.
+  \item \textbf{Display:} A desktop resolution of at least \textbf{1280$\times$720} is recommended; other resolutions are supported when the window is resized.
+  \item \textbf{Optional input:} An \textbf{XInput-compatible gamepad} (e.g.\ Xbox controller) for analog control. Keyboard control works without a gamepad.
+\end{itemize}
+
+\section{Controls}
+
+\subsection{Keyboard (WASD and related keys)}
+
+Input is handled via the keyboard using a typical first-person / vehicle-style layout (DirectInput), for example:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+  \toprule
+  \textbf{Input} & \textbf{Action} \\
+  \midrule
+  W / S & Forward / reverse (throttle) \\
+  A / D & Steer left / right \\
+  Space & Brake (or hand brake, depending on build) \\
+  Esc & Quit or return (if implemented) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Exact key bindings may match the on-screen HUD or readme in the binary package; the layout above reflects the project design (WASD movement with separate brake).
+
+\subsection{Gamepad (XInput)}
+
+With an XInput controller connected, the application maps analog axes and triggers for smoother control than the keyboard:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+  \toprule
+  \textbf{Control} & \textbf{Action} \\
+  \midrule
+  Left stick & Steering \\
+  Right trigger & Throttle (accelerate) \\
+  Left trigger & Brake / reverse (as implemented) \\
+  Start / Back & Pause or UI (if implemented) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Triggers provide analog throttle similar to a real vehicle; keyboard W/S act as digital throttle inputs.
+
+\section{Troubleshooting}
+
+\begin{itemize}
+  \item \textbf{Missing DLLs or DirectX errors:} Install or repair the DirectX~9 end-user runtime and ensure GPU drivers are up to date.
+  \item \textbf{Black screen or failed device creation:} Try windowed mode, update graphics drivers, and confirm no other application has exclusive full-screen access to the GPU.
+  \item \textbf{Assets not found:} Run from \texttt{Game\_Build} with the supplied \texttt{Assets} (or equivalent) folder beside the executable.
+  \item \textbf{Gamepad not detected:} Use a wired connection or official wireless adapter; confirm the controller appears in Windows as an XInput device.
+\end{itemize}
+
+\end{document}
