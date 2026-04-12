@@ -7,6 +7,7 @@
 
 /**
  * @brief Heightfield terrain: bilinear height sampling, CPU mesh, grass/rock splatting (FFP).
+ *        Mesh indices are grouped into world chunks for frustum culling (Minecraft-style tiles).
  */
 class Terrain {
 public:
@@ -28,14 +29,29 @@ public:
 
     void Draw(IDirect3DDevice9* device);
 
+    /** True when `Assets/terrain/heightmap_*.png` (etc.) was loaded for the heightfield. */
+    bool UsingHeightmap() const { return heightmap_loaded_; }
+
 private:
-    bool BuildHeightData();
+    bool BuildHeightData(IDirect3DDevice9* device);
     bool CreateTextures(IDirect3DDevice9* device);
     bool CreateMesh(IDirect3DDevice9* device);
 
     int CellCountX() const { return grid_cells_x_; }
     int CellCountZ() const { return grid_cells_z_; }
     float HeightAtGrid(int ix, int iz) const;
+
+    struct TerrainChunk {
+        UINT start_index = 0;
+        UINT primitive_count = 0;
+        UINT min_vertex_index = 0;
+        UINT vertex_count = 0;
+        D3DXVECTOR3 aabb_min{};
+        D3DXVECTOR3 aabb_max{};
+    };
+
+    static void ExtractFrustumPlanes(const D3DXMATRIX& view_proj, D3DXPLANE out_planes[6]);
+    static bool ChunkIntersectsFrustum(const TerrainChunk& chunk, const D3DXPLANE planes[6]);
 
     IDirect3DDevice9* device_ = nullptr;
 
@@ -49,9 +65,16 @@ private:
     int hm_res_z_ = 0;
 
     IDirect3DVertexBuffer9* vb_ = nullptr;
+    IDirect3DVertexBuffer9* vb_stone_splat_ = nullptr;
+    IDirect3DVertexBuffer9* vb_mountain_splat_ = nullptr;
     IDirect3DIndexBuffer9* ib_ = nullptr;
     UINT num_indices_ = 0;
+    std::vector<TerrainChunk> chunks_;
 
     IDirect3DTexture9* grass_tex_ = nullptr;
     IDirect3DTexture9* rock_tex_ = nullptr;
+    IDirect3DTexture9* stone_tex_ = nullptr;
+    IDirect3DTexture9* mountain_tex_ = nullptr;
+
+    bool heightmap_loaded_ = false;
 };

@@ -150,7 +150,8 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
         std::array<const wchar_t*, 4>{kJeepObjPathA, kJeepObjPathB, kJeepObjPathC, kJeepPath};
     const StaticModelLoadResult jeep_load = LoadStaticModelCandidates(device, &jeep_, jeep_candidates);
     if (FAILED(jeep_load.hr) || !jeep_.IsLoaded()) {
-        const HRESULT fallback_hr = jeep_.CreateBox(device, 4.6f, 1.8f, 2.4f);
+        const HRESULT fallback_hr =
+            jeep_.CreateBox(device, 4.6f, 1.8f, 2.4f, L"Assets/terrain/tex_stone.jpg");
         if (FAILED(fallback_hr) || !jeep_.IsLoaded()) {
             init_error_ = L"Jeep model failed.\nResolved path: ";
             init_error_ += jeep_load.resolved_path.empty() ? std::wstring(L"<none>") : jeep_load.resolved_path.native();
@@ -168,7 +169,8 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
         std::array<const wchar_t*, 4>{kCrateObjPathA, kCrateObjPathB, kCrateObjPathC, kCratePath};
     const StaticModelLoadResult crate_load = LoadStaticModelCandidates(device, &crate_, crate_candidates);
     if (FAILED(crate_load.hr) || !crate_.IsLoaded()) {
-        const HRESULT fallback_hr = crate_.CreateBox(device, 4.4f, 4.4f, 4.4f);
+        const HRESULT fallback_hr =
+            crate_.CreateBox(device, 4.4f, 4.4f, 4.4f, L"Assets/terrain/tex_crate.png");
         if (FAILED(fallback_hr) || !crate_.IsLoaded()) {
             init_error_ = L"Crate model failed.\nResolved path: ";
             init_error_ += crate_load.resolved_path.empty() ? std::wstring(L"<none>") : crate_load.resolved_path.native();
@@ -187,7 +189,8 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     const StaticModelLoadResult boulder_load =
         LoadStaticModelCandidates(device, &boulder_mesh_, boulder_candidates);
     if (FAILED(boulder_load.hr) || !boulder_mesh_.IsLoaded()) {
-        const HRESULT fallback_hr = boulder_mesh_.CreateSphere(device, boulder_radius_, 20, 14);
+        const HRESULT fallback_hr = boulder_mesh_.CreateSphere(device, boulder_radius_, 20, 14,
+                                                               L"Assets/terrain/tex_rock.jpg");
         if (FAILED(fallback_hr) || !boulder_mesh_.IsLoaded()) {
             init_error_ = L"Boulder model failed.\nResolved path: ";
             init_error_ += boulder_load.resolved_path.empty() ? std::wstring(L"<none>") : boulder_load.resolved_path.native();
@@ -246,6 +249,7 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     vehicle_.Reset(vs, 0.4f);
     boulder_vel_ = D3DXVECTOR3(0.f, 0.f, 0.f);
     sim_time_ = 0.f;
+    fps_smoothed_ = 0.f;
     wants_quit_ = false;
     return true;
 }
@@ -295,6 +299,11 @@ void Game::Update(float dt, Graphics& graphics) {
     }
 
     sim_time_ += dt;
+    if (dt > 1e-6f) {
+        const float instant_fps = 1.f / dt;
+        fps_smoothed_ =
+            (fps_smoothed_ <= 0.f) ? instant_fps : (fps_smoothed_ * 0.9f + instant_fps * 0.1f);
+    }
     const float day_t = std::fmod(sim_time_ * 0.12f, 6.2831853f);
     const float sun_h = std::sinf(day_t);
     const float sun_x = std::cosf(day_t * 0.7f);
@@ -411,10 +420,10 @@ void Game::DrawHud(IDirect3DDevice9* device, int client_w, int client_h) {
     }
     const int bottom_pad = (std::max)(12, client_h - 8);
     const VehicleState& vs = vehicle_.State();
-    wchar_t line[512];
-    swprintf_s(line, L"MAEG4060 sandbox | WASD Space Esc M | speed %.1f | pos (%.1f, %.1f, %.1f)",
-               vs.speed, vs.position.x, vs.position.y, vs.position.z);
-    RECT r{8, 8, client_w - 8, (std::min)(80, bottom_pad)};
+    wchar_t line[768];
+    swprintf_s(line, L"MAEG4060 sandbox | ~%.0f FPS | speed %.1f | pos (%.1f, %.1f, %.1f)",
+               fps_smoothed_, vs.speed, vs.position.x, vs.position.y, vs.position.z);
+    RECT r{8, 8, client_w - 8, (std::min)(36, bottom_pad)};
     font_->DrawTextW(nullptr, line, -1, &r, DT_LEFT | DT_TOP, D3DCOLOR_ARGB(255, 255, 255, 255));
     const wchar_t* windmill_state = L"off";
     if (windmill_loaded_) {
@@ -427,8 +436,29 @@ void Game::DrawHud(IDirect3DDevice9* device, int client_w, int client_h) {
         }
     }
     swprintf_s(line, L"sim t=%.1fs | windmill=%s", sim_time_, windmill_state);
-    RECT r2{8, 36, client_w - 8, (std::min)(120, bottom_pad)};
+    RECT r2{8, 32, client_w - 8, (std::min)(56, bottom_pad)};
     font_->DrawTextW(nullptr, line, -1, &r2, DT_LEFT | DT_TOP, D3DCOLOR_ARGB(255, 220, 240, 255));
+
+    const wchar_t* terrain_src = terrain_.UsingHeightmap() ? L"heightmap image" : L"procedural";
+    swprintf_s(line, L"Terrain: %s | grass + rock + stone + mountain splats | crate texture on props",
+               terrain_src);
+    RECT r3{8, 56, client_w - 8, (std::min)(80, bottom_pad)};
+    font_->DrawTextW(nullptr, line, -1, &r3, DT_LEFT | DT_TOP, D3DCOLOR_ARGB(255, 210, 230, 255));
+
+    const wchar_t* controls =
+        L"Controls:\n"
+        L"  W = forward throttle\n"
+        L"  S = reverse throttle\n"
+        L"  A = steer left\n"
+        L"  D = steer right\n"
+        L"  Space = brake\n"
+        L"  Esc = quit\n"
+        L"  M = toggle windmill animation (when loaded)\n"
+        L"(Gamepad: left stick steer, triggers throttle / brake)";
+    RECT r4{8, 84, client_w - 8, bottom_pad};
+    font_->DrawTextW(nullptr, controls, -1, &r4,
+                     DT_LEFT | DT_TOP | DT_NOPREFIX | DT_WORDBREAK,
+                     D3DCOLOR_ARGB(255, 200, 255, 210));
 }
 
 void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int client_h,

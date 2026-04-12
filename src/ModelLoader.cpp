@@ -1,5 +1,7 @@
 #include "ModelLoader.h"
 
+#include <windows.h>
+
 #include <d3dx9.h>
 
 #include <algorithm>
@@ -103,6 +105,40 @@ std::string ToLowerCopy(std::string s) {
     return s;
 }
 
+std::filesystem::path ModuleDirectory() {
+    std::wstring buffer(MAX_PATH, L'\0');
+    DWORD len = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    while (len >= buffer.size()) {
+        buffer.resize(buffer.size() * 2, L'\0');
+        len = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    }
+    buffer.resize(len);
+    return std::filesystem::path(buffer).parent_path();
+}
+
+std::filesystem::path ResolveAssetPathW(const wchar_t* relative_path) {
+    if (!relative_path || !relative_path[0]) {
+        return {};
+    }
+
+    const std::filesystem::path rel(relative_path);
+    const std::filesystem::path module_dir = ModuleDirectory();
+    const std::filesystem::path cwd = std::filesystem::current_path();
+    const std::filesystem::path candidates[] = {
+        cwd / rel,
+        module_dir / rel,
+        module_dir.parent_path() / rel,
+        module_dir.parent_path().parent_path() / rel,
+    };
+
+    for (const auto& candidate : candidates) {
+        if (!candidate.empty() && std::filesystem::exists(candidate)) {
+            return candidate;
+        }
+    }
+    return {};
+}
+
 bool ShouldSkipCinema4dLine(const std::string& line) {
     const std::string trimmed = TrimLeftCopy(line);
     return trimmed.rfind("//", 0) == 0 || trimmed.rfind("{C4DMAT", 0) == 0;
@@ -147,15 +183,92 @@ HRESULT TryLoadTexture(IDirect3DDevice9* device,
     }
 
     const std::wstring wide_name = AnsiToWide(texture_filename.c_str());
-    if (!wide_name.empty()) {
-        const std::filesystem::path candidate = base_directory / wide_name;
+    if (wide_name.empty()) {
+        return D3DXCreateTextureFromFileA(device, texture_filename.c_str(), out_texture);
+    }
+
+    const std::filesystem::path rel(wide_name);
+    const std::filesystem::path leaf = rel.filename();
+
+    const std::filesystem::path local_candidates[] = {
+        base_directory / rel,
+        base_directory.parent_path() / L"terrain" / leaf,
+    };
+
+    for (const std::filesystem::path& candidate : local_candidates) {
+        if (candidate.empty()) {
+            continue;
+        }
+        std::error_code ec;
+        if (!std::filesystem::exists(candidate, ec)) {
+            continue;
+        }
         const HRESULT hr = D3DXCreateTextureFromFileW(device, candidate.c_str(), out_texture);
         if (SUCCEEDED(hr) && *out_texture) {
             return hr;
         }
     }
 
+    if (!leaf.empty()) {
+        const std::wstring rel_terrain = std::wstring(L"Assets/terrain/") + leaf.wstring();
+        const std::filesystem::path resolved = ResolveAssetPathW(rel_terrain.c_str());
+        if (!resolved.empty()) {
+            const HRESULT hr = D3DXCreateTextureFromFileW(device, resolved.c_str(), out_texture);
+            if (SUCCEEDED(hr) && *out_texture) {
+                return hr;
+            }
+        }
+    }
+
     return D3DXCreateTextureFromFileA(device, texture_filename.c_str(), out_texture);
+}
+
+void ApplyInferTerrainTexturesIfMissing(IDirect3DDevice9* device,
+                                        const std::filesystem::path& model_path,
+                                        std::vector<IDirect3DTexture9*>* textures) {
+    if (!device || !textures || textures->empty()) {
+        return;
+    }
+
+    bool any_missing = false;
+    for (IDirect3DTexture9* t : *textures) {
+        if (!t) {
+            any_missing = true;
+            break;
+        }
+    }
+    if (!any_missing) {
+        return;
+    }
+
+    const std::string stem_lower = ToLowerCopy(model_path.stem().string());
+    const char* tex = nullptr;
+    if (stem_lower.find("crate") != std::string::npos) {
+        tex = "tex_crate.png";
+    } else if (stem_lower.find("boulder") != std::string::npos) {
+        tex = "tex_rock.jpg";
+    } else if (stem_lower.find("jeep") != std::string::npos) {
+        tex = "tex_stone.jpg";
+    } else if (stem_lower.find("windmill") != std::string::npos) {
+        tex = "tex_stone.jpg";
+    }
+    if (!tex) {
+        return;
+    }
+
+    const std::filesystem::path resolved = ResolveAssetPathW(
+        (std::wstring(L"Assets/terrain/") + AnsiToWide(tex)).c_str());
+    if (resolved.empty()) {
+        return;
+    }
+
+    const std::filesystem::path terrain_dir = resolved.parent_path();
+    for (size_t i = 0; i < textures->size(); ++i) {
+        if ((*textures)[i]) {
+            continue;
+        }
+        TryLoadTexture(device, tex, terrain_dir, &(*textures)[i]);
+    }
 }
 
 int ResolveObjIndex(int raw_index, size_t count) {
@@ -418,6 +531,7 @@ HRESULT ModelLoader::LoadMeshFromX(IDirect3DDevice9* device, const wchar_t* x_fi
                 d3dx_materials[i].pTextureFilename ? d3dx_materials[i].pTextureFilename : "";
             TryLoadTexture(device, texture_name, source_dir, &textures_[i]);
         }
+        ApplyInferTerrainTexturesIfMissing(device, source_path, &textures_);
     }
 
     if (materials_buffer) {
@@ -644,12 +758,14 @@ HRESULT ModelLoader::LoadMeshFromObj(IDirect3DDevice9* device, const wchar_t* ob
         }
         TryLoadTexture(device, obj_materials[i].texture_filename, source_dir, &textures_[i]);
     }
+    ApplyInferTerrainTexturesIfMissing(device, source_path, &textures_);
 
     mesh_ = mesh;
     return S_OK;
 }
 
-HRESULT ModelLoader::CreateBox(IDirect3DDevice9* device, float width, float height, float depth) {
+HRESULT ModelLoader::CreateBox(IDirect3DDevice9* device, float width, float height, float depth,
+                               const wchar_t* optional_diffuse_texture) {
     Release();
     if (!device) {
         return E_INVALIDARG;
@@ -665,11 +781,19 @@ HRESULT ModelLoader::CreateBox(IDirect3DDevice9* device, float width, float heig
     }
 
     mesh_ = mesh;
+    materials_.assign(1, MakeDefaultMaterial());
+    textures_.assign(1, nullptr);
+    if (optional_diffuse_texture && optional_diffuse_texture[0]) {
+        const std::filesystem::path resolved = ResolveAssetPathW(optional_diffuse_texture);
+        if (!resolved.empty()) {
+            D3DXCreateTextureFromFileW(device, resolved.c_str(), &textures_[0]);
+        }
+    }
     return S_OK;
 }
 
-HRESULT ModelLoader::CreateSphere(IDirect3DDevice9* device, float radius, UINT slices,
-                                  UINT stacks) {
+HRESULT ModelLoader::CreateSphere(IDirect3DDevice9* device, float radius, UINT slices, UINT stacks,
+                                  const wchar_t* optional_diffuse_texture) {
     Release();
     if (!device) {
         return E_INVALIDARG;
@@ -685,6 +809,14 @@ HRESULT ModelLoader::CreateSphere(IDirect3DDevice9* device, float radius, UINT s
     }
 
     mesh_ = mesh;
+    materials_.assign(1, MakeDefaultMaterial());
+    textures_.assign(1, nullptr);
+    if (optional_diffuse_texture && optional_diffuse_texture[0]) {
+        const std::filesystem::path resolved = ResolveAssetPathW(optional_diffuse_texture);
+        if (!resolved.empty()) {
+            D3DXCreateTextureFromFileW(device, resolved.c_str(), &textures_[0]);
+        }
+    }
     return S_OK;
 }
 

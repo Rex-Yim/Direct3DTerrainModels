@@ -24,8 +24,10 @@ public:
     HRESULT LoadMeshFromX(IDirect3DDevice9* device, const wchar_t* xFilePath);
     // Loads mesh from Wavefront OBJ and optional MTL materials/textures.
     HRESULT LoadMeshFromObj(IDirect3DDevice9* device, const wchar_t* objFilePath);
-    HRESULT CreateBox(IDirect3DDevice9* device, float width, float height, float depth);
-    HRESULT CreateSphere(IDirect3DDevice9* device, float radius, UINT slices, UINT stacks);
+    HRESULT CreateBox(IDirect3DDevice9* device, float width, float height, float depth,
+                      const wchar_t* optional_diffuse_texture = nullptr);
+    HRESULT CreateSphere(IDirect3DDevice9* device, float radius, UINT slices, UINT stacks,
+                         const wchar_t* optional_diffuse_texture = nullptr);
     // Extension-dispatch helper: currently supports .x and .obj.
     HRESULT LoadFromFile(IDirect3DDevice9* device, const wchar_t* path);
 

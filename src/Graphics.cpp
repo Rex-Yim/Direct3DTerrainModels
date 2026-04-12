@@ -29,7 +29,9 @@ bool Graphics::CreatePresentParameters(D3DPRESENT_PARAMETERS* out_pp) const {
     pp.Windowed = TRUE;
     pp.EnableAutoDepthStencil = TRUE;
     pp.AutoDepthStencilFormat = D3DFMT_D16;
-    pp.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+    // DEFAULT waits for vsync in many windowed setups, which can add a frame of input/display
+    // latency when the GPU is already busy. IMMEDIATE trades possible tearing for snappier feel.
+    pp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
     return true;
 }
 

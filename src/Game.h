@@ -65,6 +65,8 @@ private:
     D3DXVECTOR3 windmill_pos_{72.f, 0.f, -58.f};
 
     float sim_time_ = 0.f;
+    /** Exponential moving average of frame rate for HUD (updated in Update). */
+    float fps_smoothed_ = 0.f;
     D3DCOLOR clear_color_ = D3DCOLOR_XRGB(135, 206, 235);
     D3DXVECTOR3 sun_dir_{-0.35f, -0.85f, 0.25f};
     DWORD ambient_ = D3DCOLOR_COLORVALUE(0.22f, 0.24f, 0.28f, 1.f);
