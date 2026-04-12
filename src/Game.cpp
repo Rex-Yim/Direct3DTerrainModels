@@ -239,8 +239,6 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
 
     crate_pos_.y = terrain_.SampleHeight(crate_pos_.x, crate_pos_.z);
     windmill_pos_.y = terrain_.SampleHeight(windmill_pos_.x, windmill_pos_.z);
-    boulder_pos_.x = 28.f;
-    boulder_pos_.z = -22.f;
     boulder_pos_.y = terrain_.SampleHeight(boulder_pos_.x, boulder_pos_.z) + boulder_radius_;
 
     const D3DXVECTOR3 start(8.f, 0.f, -18.f);
@@ -315,8 +313,10 @@ void Game::Update(float dt, Graphics& graphics) {
     LerpColor(&clear_color_, 1.f - blend, D3DCOLOR_XRGB(12, 18, 42), D3DCOLOR_XRGB(135, 190, 235));
     graphics.SetClearColor(clear_color_);
 
-    const float amb_day = 0.26f;
-    const float amb_night = 0.08f;
+    const float amb_day = 0.30f;
+    // Keep ground readable at night; clear-color night sky can still look brighter than terrain
+    // without a reasonable ambient floor.
+    const float amb_night = 0.17f;
     const float amb = amb_night + (amb_day - amb_night) * blend;
     ambient_ = D3DCOLOR_COLORVALUE(amb * 0.9f, amb, amb * 1.05f, 1.f);
 
@@ -445,20 +445,22 @@ void Game::DrawHud(IDirect3DDevice9* device, int client_w, int client_h) {
     RECT r3{8, 56, client_w - 8, (std::min)(80, bottom_pad)};
     font_->DrawTextW(nullptr, line, -1, &r3, DT_LEFT | DT_TOP, D3DCOLOR_ARGB(255, 210, 230, 255));
 
-    const wchar_t* controls =
-        L"Controls:\n"
-        L"  W = forward throttle\n"
-        L"  S = reverse throttle\n"
-        L"  A = steer left\n"
-        L"  D = steer right\n"
-        L"  Space = brake\n"
-        L"  Esc = quit\n"
-        L"  M = toggle windmill animation (when loaded)\n"
-        L"(Gamepad: left stick steer, triggers throttle / brake)";
-    RECT r4{8, 84, client_w - 8, bottom_pad};
-    font_->DrawTextW(nullptr, controls, -1, &r4,
-                     DT_LEFT | DT_TOP | DT_NOPREFIX | DT_WORDBREAK,
-                     D3DCOLOR_ARGB(255, 200, 255, 210));
+    const wchar_t* wasd_overlay =
+        L"W = forward      S = reverse\n"
+        L"A = steer left   D = steer right\n"
+        L"Space = brake    Esc = quit    M = windmill\n"
+        L"(Gamepad: steer / triggers)";
+    const int overlay_h = 92;
+    RECT rw{(std::max)(8, client_w - 460), (std::max)(8, client_h - overlay_h - 12), client_w - 14,
+            client_h - 10};
+    const UINT wasd_fmt = DT_RIGHT | DT_TOP | DT_NOPREFIX | DT_WORDBREAK;
+    RECT rw_shadow = rw;
+    rw_shadow.left += 2;
+    rw_shadow.right += 2;
+    rw_shadow.top += 2;
+    rw_shadow.bottom += 2;
+    font_->DrawTextW(nullptr, wasd_overlay, -1, &rw_shadow, wasd_fmt, D3DCOLOR_ARGB(240, 0, 0, 0));
+    font_->DrawTextW(nullptr, wasd_overlay, -1, &rw, wasd_fmt, D3DCOLOR_ARGB(255, 255, 245, 160));
 }
 
 void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int client_h,
@@ -516,8 +518,7 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
     D3DXMATRIX sc;
     D3DXMatrixScaling(&sc, s, s, s);
     D3DXMATRIX tr;
-    D3DXMatrixTranslation(&tr, boulder_pos_.x, boulder_pos_.y - boulder_radius_ * 0.2f,
-                          boulder_pos_.z);
+    D3DXMatrixTranslation(&tr, boulder_pos_.x, boulder_pos_.y, boulder_pos_.z);
     D3DXMatrixMultiply(&wb, &sc, &tr);
     device->SetTransform(D3DTS_WORLD, &wb);
     boulder_mesh_.Draw(device);

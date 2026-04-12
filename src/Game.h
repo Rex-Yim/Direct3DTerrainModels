@@ -57,8 +57,9 @@ private:
     bool windmill_has_animation_ = false;
     bool windmill_anim_paused_ = false;
 
-    D3DXVECTOR3 crate_pos_{-35.f, 0.f, 48.f};
-    D3DXVECTOR3 boulder_pos_{28.f, 0.f, -22.f};
+    /** Near vehicle spawn (~8, -18) so props are visible without a long drive. */
+    D3DXVECTOR3 crate_pos_{12.f, 0.f, -8.f};
+    D3DXVECTOR3 boulder_pos_{22.f, 0.f, -26.f};
     D3DXVECTOR3 boulder_vel_{0.f, 0.f, 0.f};
     float boulder_radius_ = 2.2f;
 

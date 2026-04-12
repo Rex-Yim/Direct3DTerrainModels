@@ -223,6 +223,28 @@ HRESULT TryLoadTexture(IDirect3DDevice9* device,
     return D3DXCreateTextureFromFileA(device, texture_filename.c_str(), out_texture);
 }
 
+void FinalizeMaterialsForTexturing(std::vector<D3DMATERIAL9>* materials,
+                                   const std::vector<IDirect3DTexture9*>& textures) {
+    if (!materials) {
+        return;
+    }
+    for (size_t i = 0; i < materials->size(); ++i) {
+        IDirect3DTexture9* tex = i < textures.size() ? textures[i] : nullptr;
+        D3DMATERIAL9& m = (*materials)[i];
+        if (tex) {
+            m.Diffuse.r = m.Diffuse.g = m.Diffuse.b = m.Diffuse.a = 1.f;
+            m.Ambient = m.Diffuse;
+            continue;
+        }
+        const float lum = m.Diffuse.r + m.Diffuse.g + m.Diffuse.b;
+        if (lum < 0.12f) {
+            m.Diffuse.r = m.Diffuse.g = m.Diffuse.b = 0.55f;
+            m.Diffuse.a = 1.f;
+            m.Ambient = m.Diffuse;
+        }
+    }
+}
+
 void ApplyInferTerrainTexturesIfMissing(IDirect3DDevice9* device,
                                         const std::filesystem::path& model_path,
                                         std::vector<IDirect3DTexture9*>* textures) {
@@ -532,6 +554,7 @@ HRESULT ModelLoader::LoadMeshFromX(IDirect3DDevice9* device, const wchar_t* x_fi
             TryLoadTexture(device, texture_name, source_dir, &textures_[i]);
         }
         ApplyInferTerrainTexturesIfMissing(device, source_path, &textures_);
+        FinalizeMaterialsForTexturing(&materials_, textures_);
     }
 
     if (materials_buffer) {
@@ -759,6 +782,7 @@ HRESULT ModelLoader::LoadMeshFromObj(IDirect3DDevice9* device, const wchar_t* ob
         TryLoadTexture(device, obj_materials[i].texture_filename, source_dir, &textures_[i]);
     }
     ApplyInferTerrainTexturesIfMissing(device, source_path, &textures_);
+    FinalizeMaterialsForTexturing(&materials_, textures_);
 
     mesh_ = mesh;
     return S_OK;
@@ -789,6 +813,7 @@ HRESULT ModelLoader::CreateBox(IDirect3DDevice9* device, float width, float heig
             D3DXCreateTextureFromFileW(device, resolved.c_str(), &textures_[0]);
         }
     }
+    FinalizeMaterialsForTexturing(&materials_, textures_);
     return S_OK;
 }
 
@@ -817,6 +842,7 @@ HRESULT ModelLoader::CreateSphere(IDirect3DDevice9* device, float radius, UINT s
             D3DXCreateTextureFromFileW(device, resolved.c_str(), &textures_[0]);
         }
     }
+    FinalizeMaterialsForTexturing(&materials_, textures_);
     return S_OK;
 }
 

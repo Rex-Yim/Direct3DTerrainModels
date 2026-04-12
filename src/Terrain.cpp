@@ -708,6 +708,18 @@ void Terrain::Draw(IDirect3DDevice9* device) {
         return;
     }
 
+    // Without this, terrain can inherit the last mesh material (often dark) from the prior frame.
+    D3DMATERIAL9 terrain_mtl{};
+    terrain_mtl.Diffuse.r = terrain_mtl.Diffuse.g = terrain_mtl.Diffuse.b = terrain_mtl.Diffuse.a =
+        1.f;
+    terrain_mtl.Ambient = terrain_mtl.Diffuse;
+    terrain_mtl.Specular.a = terrain_mtl.Specular.r = terrain_mtl.Specular.g =
+        terrain_mtl.Specular.b = 0.f;
+    terrain_mtl.Emissive.a = terrain_mtl.Emissive.r = terrain_mtl.Emissive.g =
+        terrain_mtl.Emissive.b = 0.f;
+    terrain_mtl.Power = 0.f;
+    device->SetMaterial(&terrain_mtl);
+
     device->SetFVF(kTerrainFvf);
     device->SetStreamSource(0, vb_, 0, sizeof(TerrainVertex));
     device->SetIndices(ib_);
