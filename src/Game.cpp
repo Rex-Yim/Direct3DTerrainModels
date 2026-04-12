@@ -25,6 +25,9 @@ constexpr wchar_t kCrateObjPathC[] = L"Assets/models/model_crate.obj";
 constexpr wchar_t kBoulderObjPathA[] = L"Assets/models/replacements/model_boulder/model_boulder.obj";
 constexpr wchar_t kBoulderObjPathB[] = L"Assets/models/replacements/model_boulder.obj";
 constexpr wchar_t kBoulderObjPathC[] = L"Assets/models/model_boulder.obj";
+constexpr wchar_t kWindmillObjPathA[] = L"Assets/models/replacements/model_windmill/model_windmill.obj";
+constexpr wchar_t kWindmillObjPathB[] = L"Assets/models/replacements/model_windmill.obj";
+constexpr wchar_t kWindmillObjPathC[] = L"Assets/models/model_windmill.obj";
 
 std::filesystem::path ModuleDirectory() {
     std::wstring buffer(MAX_PATH, L'\0');
@@ -198,11 +201,32 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
         }
     }
 
-    const std::filesystem::path windmill_path = ResolveAssetPath(kWindmillPath);
-    const HRESULT wh = windmill_path.empty() ? E_FAIL : windmill_.Load(device, windmill_path.c_str());
-    windmill_loaded_ = !windmill_path.empty() && SUCCEEDED(wh);
-    windmill_has_animation_ = windmill_loaded_ && windmill_.HasAnimation();
+    windmill_is_static_mesh_ = false;
+    windmill_loaded_ = false;
+    windmill_has_animation_ = false;
     windmill_anim_paused_ = false;
+
+    const std::filesystem::path windmill_path = ResolveAssetPath(kWindmillPath);
+    if (!windmill_path.empty()) {
+        const HRESULT wh = windmill_.Load(device, windmill_path.c_str());
+        if (SUCCEEDED(wh) && windmill_.IsLoaded()) {
+            windmill_loaded_ = true;
+            windmill_has_animation_ = windmill_.HasAnimation();
+        }
+    }
+
+    if (!windmill_loaded_) {
+        const auto windmill_candidates =
+            std::array<const wchar_t*, 4>{kWindmillObjPathA, kWindmillObjPathB, kWindmillObjPathC,
+                                          kWindmillPath};
+        const StaticModelLoadResult wm_static =
+            LoadStaticModelCandidates(device, &windmill_static_, windmill_candidates);
+        if (SUCCEEDED(wm_static.hr) && windmill_static_.IsLoaded()) {
+            windmill_loaded_ = true;
+            windmill_is_static_mesh_ = true;
+            windmill_has_animation_ = false;
+        }
+    }
 
     if (FAILED(D3DXCreateFontW(device, 20, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET,
                                OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI",
@@ -232,8 +256,11 @@ void Game::Shutdown() {
         font_ = nullptr;
     }
     windmill_.Release();
+    windmill_static_.Unload();
     windmill_loaded_ = false;
+    windmill_is_static_mesh_ = false;
     windmill_has_animation_ = false;
+    windmill_anim_paused_ = false;
     boulder_mesh_.Unload();
     crate_.Unload();
     jeep_.Unload();
@@ -393,6 +420,8 @@ void Game::DrawHud(IDirect3DDevice9* device, int client_w, int client_h) {
     if (windmill_loaded_) {
         if (windmill_has_animation_) {
             windmill_state = windmill_anim_paused_ ? L"paused" : L"anim";
+        } else if (windmill_is_static_mesh_) {
+            windmill_state = windmill_anim_paused_ ? L"paused" : L"spin";
         } else {
             windmill_state = L"static";
         }
@@ -430,9 +459,21 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
     device->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
 
     if (windmill_loaded_) {
-        D3DXMATRIX wm;
-        D3DXMatrixTranslation(&wm, windmill_pos_.x, windmill_pos_.y, windmill_pos_.z);
-        windmill_.Draw(device, &wm);
+        if (windmill_is_static_mesh_) {
+            const float angle = windmill_anim_paused_ ? 0.f : sim_time_ * 0.65f;
+            D3DXMATRIX rot;
+            D3DXMATRIX tr;
+            D3DXMATRIX wm;
+            D3DXMatrixRotationY(&rot, angle);
+            D3DXMatrixTranslation(&tr, windmill_pos_.x, windmill_pos_.y, windmill_pos_.z);
+            D3DXMatrixMultiply(&wm, &rot, &tr);
+            device->SetTransform(D3DTS_WORLD, &wm);
+            windmill_static_.Draw(device);
+        } else {
+            D3DXMATRIX wm;
+            D3DXMatrixTranslation(&wm, windmill_pos_.x, windmill_pos_.y, windmill_pos_.z);
+            windmill_.Draw(device, &wm);
+        }
     }
 
     D3DXMATRIX wc;
