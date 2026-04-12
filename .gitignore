@@ -1,5 +1,6 @@
-# Build
+# Build / packaged run folder (cmake --install or package script)
 build/
+Game_Build/
 out/
 cmake-build-*/
 CMakeFiles/
@@ -34,6 +35,17 @@ Release/
 *.pdb
 *.ilk
 *.exp
+!Assets/models/**/*.obj
+
+# Keep source model files for static-asset replacements.
+!Assets/models/**/*.obj
+!Assets/models/**/*.mtl
+!Assets/models/**/*.png
+!Assets/models/**/*.jpg
+!Assets/models/**/*.jpeg
+!Assets/models/**/*.bmp
+!Assets/models/**/*.tga
+!Assets/models/**/*.dds
 
 # macOS
 .DS_Store

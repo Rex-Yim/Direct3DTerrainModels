@@ -1,5 +1,13 @@
 #include "Graphics.h"
 
+namespace {
+
+bool IsDeviceResetError(HRESULT hr) {
+    return hr == D3DERR_DEVICELOST || hr == D3DERR_DEVICENOTRESET;
+}
+
+}  // namespace
+
 Graphics::~Graphics() {
     Shutdown();
 }
@@ -30,6 +38,7 @@ bool Graphics::Initialize(HWND hwnd, int width, int height) {
     height_ = height;
     hwnd_ = hwnd;
     scene_active_ = false;
+    device_lost_ = false;
 
     Shutdown();
 
@@ -84,18 +93,60 @@ bool Graphics::Resize(int width, int height) {
     width_ = width;
     height_ = height;
     scene_active_ = false;
+    if (device_lost_) {
+        return true;
+    }
 
+    return ResetDevice();
+}
+
+bool Graphics::RecoverDevice() {
+    if (!d3d_device_) {
+        return false;
+    }
+    if (!device_lost_) {
+        return true;
+    }
+
+    const HRESULT hr = d3d_device_->TestCooperativeLevel();
+    if (hr == D3DERR_DEVICELOST) {
+        return false;
+    }
+    if (hr == D3DERR_DEVICENOTRESET) {
+        return ResetDevice();
+    }
+    if (SUCCEEDED(hr)) {
+        device_lost_ = false;
+        return true;
+    }
+    return false;
+}
+
+bool Graphics::ResetDevice() {
     D3DPRESENT_PARAMETERS pp = {};
     if (!CreatePresentParameters(&pp)) {
         return false;
     }
 
-    HRESULT hr = d3d_device_->Reset(&pp);
-    return SUCCEEDED(hr);
+    const HRESULT hr = d3d_device_->Reset(&pp);
+    if (SUCCEEDED(hr)) {
+        device_lost_ = false;
+        return true;
+    }
+    if (IsDeviceResetError(hr)) {
+        MarkDeviceLost();
+    }
+    return false;
+}
+
+void Graphics::MarkDeviceLost() {
+    scene_active_ = false;
+    device_lost_ = true;
 }
 
 void Graphics::Shutdown() {
     scene_active_ = false;
+    device_lost_ = false;
     if (d3d_device_) {
         d3d_device_->Release();
         d3d_device_ = nullptr;
@@ -108,7 +159,7 @@ void Graphics::Shutdown() {
 
 void Graphics::BeginFrame() {
     scene_active_ = false;
-    if (!d3d_device_) {
+    if (!d3d_device_ || device_lost_) {
         return;
     }
 
@@ -120,19 +171,38 @@ void Graphics::BeginFrame() {
         1.0f,
         0);
     if (FAILED(hr)) {
+        if (IsDeviceResetError(hr)) {
+            MarkDeviceLost();
+        }
         return;
     }
 
-    scene_active_ = SUCCEEDED(d3d_device_->BeginScene());
+    hr = d3d_device_->BeginScene();
+    if (FAILED(hr)) {
+        if (IsDeviceResetError(hr)) {
+            MarkDeviceLost();
+        }
+        return;
+    }
+    scene_active_ = true;
 }
 
 void Graphics::EndFrame() {
-    if (!d3d_device_) {
+    if (!d3d_device_ || device_lost_) {
         return;
     }
     if (scene_active_) {
-        d3d_device_->EndScene();
+        const HRESULT end_hr = d3d_device_->EndScene();
         scene_active_ = false;
+        if (FAILED(end_hr)) {
+            if (IsDeviceResetError(end_hr)) {
+                MarkDeviceLost();
+            }
+            return;
+        }
     }
-    d3d_device_->Present(nullptr, nullptr, nullptr, nullptr);
+    const HRESULT hr = d3d_device_->Present(nullptr, nullptr, nullptr, nullptr);
+    if (FAILED(hr) && IsDeviceResetError(hr)) {
+        MarkDeviceLost();
+    }
 }

@@ -19,10 +19,17 @@ float DeadZone(float v, float zone) {
 
 void Input::Update() {
     state_ = {};
+    state_.windmill_toggle = false;
 
     if ((GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0) {
         state_.quit = true;
     }
+
+    const bool m_down = (GetAsyncKeyState('M') & 0x8000) != 0;
+    if (m_down && !prev_m_down_) {
+        state_.windmill_toggle = true;
+    }
+    prev_m_down_ = m_down;
 
     float throttle = 0.f;
     if ((GetAsyncKeyState('W') & 0x8000) != 0) {

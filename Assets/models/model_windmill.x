@@ -65292,6 +65292,5 @@ Mesh CINEMA4D_Mesh {
       0.0;0.0;0.0;;
     }
     
-    {C4DMAT_GelaenderWindrad}
   }
 }

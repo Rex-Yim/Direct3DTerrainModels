@@ -6,6 +6,7 @@
 #include <windows.h>
 
 #include <algorithm>
+#include <string>
 
 #include <d3dx9.h>
 
@@ -22,6 +23,7 @@ constexpr int kInitialClientHeight = 720;
 
 Graphics* g_graphics = nullptr;
 Game* g_game = nullptr;
+bool g_game_device_needs_reset = false;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
@@ -34,13 +36,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             const int client_w = LOWORD(lParam);
             const int client_h = HIWORD(lParam);
             if (client_w > 0 && client_h > 0) {
-                IDirect3DDevice9* dev = g_graphics->Device();
-                if (g_game && dev) {
+                if (g_game && !g_graphics->IsDeviceLost() && !g_game_device_needs_reset) {
                     g_game->OnLostDevice();
+                    g_game_device_needs_reset = true;
                 }
-                g_graphics->Resize(client_w, client_h);
-                if (g_game && dev) {
-                    g_game->OnResetDevice(dev);
+                const bool resized = g_graphics->Resize(client_w, client_h);
+                if (resized && g_game && !g_graphics->IsDeviceLost()) {
+                    g_game->OnResetDevice(g_graphics->Device());
+                    g_game_device_needs_reset = false;
                 }
             }
         }
@@ -92,6 +95,12 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, PWSTR /*cmd
     g_graphics = &graphics;
     if (!graphics.Initialize(hwnd, kInitialClientWidth, kInitialClientHeight)) {
         g_graphics = nullptr;
+        MessageBoxW(hwnd,
+                    L"Failed to create the Direct3D 9 device.\n\n"
+                    L"Make sure the required DirectX runtime DLLs are next to the executable "
+                    L"and that the app is running in a session with graphics acceleration.",
+                    L"Direct3D initialization failed",
+                    MB_OK | MB_ICONERROR);
         return 1;
     }
 
@@ -101,7 +110,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, PWSTR /*cmd
         g_game = nullptr;
         g_graphics = nullptr;
         graphics.Shutdown();
-        MessageBoxW(hwnd, L"Game initialization failed (assets or D3D).", L"Error", MB_OK | MB_ICONERROR);
+        const std::wstring message = game.InitError().empty()
+            ? std::wstring(L"Game initialization failed.")
+            : std::wstring(L"Game initialization failed:\n\n") + game.InitError();
+        MessageBoxW(hwnd, message.c_str(), L"Error", MB_OK | MB_ICONERROR);
         return 1;
     }
 
@@ -121,6 +133,19 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, PWSTR /*cmd
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
         } else {
+            if (graphics.IsDeviceLost()) {
+                if (!g_game_device_needs_reset) {
+                    game.OnLostDevice();
+                    g_game_device_needs_reset = true;
+                }
+                if (!graphics.RecoverDevice()) {
+                    Sleep(50);
+                    continue;
+                }
+                game.OnResetDevice(graphics.Device());
+                g_game_device_needs_reset = false;
+            }
+
             LARGE_INTEGER now{};
             QueryPerformanceCounter(&now);
             float dt = static_cast<float>(now.QuadPart - prev.QuadPart) / static_cast<float>(freq.QuadPart);
@@ -130,6 +155,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, PWSTR /*cmd
             game.Update(dt, graphics);
 
             graphics.BeginFrame();
+            if (graphics.IsDeviceLost()) {
+                continue;
+            }
             if (graphics.IsSceneActive()) {
                 game.Render(graphics.Device(), camera, graphics.ClientWidth(), graphics.ClientHeight(),
                             true);

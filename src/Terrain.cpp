@@ -1,9 +1,12 @@
 #include "Terrain.h"
 
+#include <windows.h>
+
 #include <d3dx9.h>
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 
 namespace {
 
@@ -28,6 +31,64 @@ float ProceduralHeight(float wx, float wz) {
     h += 0.00018f * (wx * wx + wz * wz);
     h += 3.f * std::sinf((wx + wz) * 0.012f);
     return h;
+}
+
+std::filesystem::path ModuleDirectory() {
+    std::wstring buffer(MAX_PATH, L'\0');
+    DWORD len = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    while (len >= buffer.size()) {
+        buffer.resize(buffer.size() * 2, L'\0');
+        len = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    }
+    buffer.resize(len);
+    return std::filesystem::path(buffer).parent_path();
+}
+
+std::filesystem::path ResolveTerrainAssetPath(const wchar_t* relative_path) {
+    if (!relative_path || !relative_path[0]) {
+        return {};
+    }
+
+    const std::filesystem::path rel(relative_path);
+    const std::filesystem::path module_dir = ModuleDirectory();
+    const std::filesystem::path cwd = std::filesystem::current_path();
+    const std::filesystem::path candidates[] = {
+        cwd / rel,
+        module_dir / rel,
+        module_dir.parent_path() / rel,
+        module_dir.parent_path().parent_path() / rel,
+    };
+
+    for (const auto& candidate : candidates) {
+        if (!candidate.empty() && std::filesystem::exists(candidate)) {
+            return candidate;
+        }
+    }
+    return {};
+}
+
+template <size_t N>
+bool TryLoadTextureCandidates(IDirect3DDevice9* device,
+                              const wchar_t* const (&candidates)[N],
+                              IDirect3DTexture9** out_texture) {
+    if (!device || !out_texture) {
+        return false;
+    }
+
+    *out_texture = nullptr;
+    for (const wchar_t* candidate : candidates) {
+        const std::filesystem::path resolved = ResolveTerrainAssetPath(candidate);
+        if (resolved.empty()) {
+            continue;
+        }
+
+        IDirect3DTexture9* texture = nullptr;
+        if (SUCCEEDED(D3DXCreateTextureFromFileW(device, resolved.c_str(), &texture)) && texture) {
+            *out_texture = texture;
+            return true;
+        }
+    }
+    return false;
 }
 
 HRESULT FillSolidNoiseTexture(IDirect3DDevice9* device, IDirect3DTexture9** out, DWORD base_rgb,
@@ -159,10 +220,24 @@ void Terrain::SampleNormal(float world_x, float world_z, D3DXVECTOR3* out_normal
 }
 
 bool Terrain::CreateTextures(IDirect3DDevice9* device) {
-    if (FAILED(FillSolidNoiseTexture(device, &grass_tex_, D3DCOLOR_XRGB(55, 120, 45), true))) {
+    const wchar_t* grass_candidates[] = {
+        L"Assets/terrain/tex_grass.jpg",
+        L"Assets/terrain/tex_grass.png",
+    };
+    const wchar_t* rock_candidates[] = {
+        L"Assets/terrain/tex_rock.jpg",
+        L"Assets/terrain/tex_rock.png",
+        L"Assets/terrain/tex_mountain.png",
+        L"Assets/terrain/tex_stone.jpg",
+        L"Assets/terrain/tex_stone.png",
+    };
+
+    if (!TryLoadTextureCandidates(device, grass_candidates, &grass_tex_) &&
+        FAILED(FillSolidNoiseTexture(device, &grass_tex_, D3DCOLOR_XRGB(55, 120, 45), true))) {
         return false;
     }
-    if (FAILED(FillSolidNoiseTexture(device, &rock_tex_, D3DCOLOR_XRGB(110, 105, 98), true))) {
+    if (!TryLoadTextureCandidates(device, rock_candidates, &rock_tex_) &&
+        FAILED(FillSolidNoiseTexture(device, &rock_tex_, D3DCOLOR_XRGB(110, 105, 98), true))) {
         return false;
     }
     return true;

@@ -2,6 +2,8 @@
 
 #include <windows.h>
 
+#include <string>
+
 #include <d3d9.h>
 #include <d3dx9.h>
 #include <d3dx9math.h>
@@ -30,6 +32,7 @@ public:
     void Render(IDirect3DDevice9* device, Camera& camera, int client_w, int client_h,
                 bool scene_active);
 
+    const std::wstring& InitError() const { return init_error_; }
     bool WantsQuit() const { return wants_quit_; }
 
 private:
@@ -48,6 +51,8 @@ private:
     ModelLoader boulder_mesh_;
     HierarchyModel windmill_;
     bool windmill_loaded_ = false;
+    bool windmill_has_animation_ = false;
+    bool windmill_anim_paused_ = false;
 
     D3DXVECTOR3 crate_pos_{-35.f, 0.f, 48.f};
     D3DXVECTOR3 boulder_pos_{28.f, 0.f, -22.f};
@@ -62,4 +67,5 @@ private:
     DWORD ambient_ = D3DCOLOR_COLORVALUE(0.22f, 0.24f, 0.28f, 1.f);
 
     ID3DXFont* font_ = nullptr;
+    std::wstring init_error_;
 };

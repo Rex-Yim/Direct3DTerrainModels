@@ -4,6 +4,10 @@ project(maeg4060_stage2 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 # Legacy June 2010 SDK (DXSDK_DIR), or Microsoft.DXSDK.D3DX NuGet headers/libs (no global installer).
 set(_d3dx_nuget_ver "9.29.952.8")
 set(_d3dx_nuget_root "${CMAKE_BINARY_DIR}/Microsoft.DXSDK.D3DX")
@@ -79,6 +83,20 @@ target_link_libraries(${PROJECT_NAME} PRIVATE d3d9 d3dx9 xinput9_1_0)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+        "${CMAKE_SOURCE_DIR}/Assets"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/Assets"
+)
+
+if(D3DX_INSTALL_DLL)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${D3DX_INSTALL_DLL}"
+            "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+    )
+endif()
 
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)

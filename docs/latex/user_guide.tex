@@ -50,6 +50,10 @@ Alternatively, from the repository root: \texttt{cmake -B build -G "Visual Studi
 
 To package binaries: run \texttt{scripts/package\_game\_build.bat} to populate \texttt{Game\_Build}, or \texttt{cmake --install build --prefix Game\_Build}.
 
+\subsection{GitHub Actions (optional)}
+
+If \texttt{.github/workflows/windows-build.yml} is enabled on your fork, the \textbf{Windows build} workflow on \texttt{windows-latest} produces an artifact (zip) containing \texttt{maeg4060\_stage2.exe}, \texttt{D3DX9\_43.dll} when the NuGet D3DX path is used, and a copy of \texttt{Assets/}. Download the artifact, unzip on Windows, and run the executable from that folder (keep \texttt{Assets} beside the \texttt{.exe}).
+
 \section{Hardware and software requirements}
 
 \begin{itemize}
@@ -73,6 +77,7 @@ Input is handled via the Win32 keyboard API (\texttt{GetAsyncKeyState}) with a v
   W / S & Forward / reverse (throttle) \\
   A / D & Steer left / right \\
   Space & Brake (or hand brake, depending on build) \\
+  M & Pause / resume windmill animation (when the windmill has animation data) \\
   Esc & Quit application \\
   \bottomrule
 \end{tabular}
@@ -105,7 +110,7 @@ Triggers provide analog throttle similar to a real vehicle; keyboard W/S act as 
 \begin{itemize}
   \item \textbf{Missing DLLs or DirectX errors:} Install or repair the DirectX~9 end-user runtime and ensure GPU drivers are up to date.
   \item \textbf{Black screen or failed device creation:} Try windowed mode, update graphics drivers, and confirm no other application has exclusive full-screen access to the GPU.
-  \item \textbf{Assets not found:} Run from \texttt{Game\_Build} with the supplied \texttt{Assets} (or equivalent) folder beside the executable.
+  \item \textbf{Assets not found:} Run from \texttt{Game\_Build} with the supplied \texttt{Assets} (or equivalent) folder beside the executable. For static prop replacements, place OBJ/MTL files under \texttt{Assets/models/replacements} (see \texttt{Assets/models/replacements/README.md}).
   \item \textbf{Gamepad not detected:} Use a wired connection or official wireless adapter; confirm the controller appears in Windows as an XInput device.
 \end{itemize}
 

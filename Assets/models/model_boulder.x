@@ -18160,6 +18160,5 @@ Mesh CINEMA4D_Mesh {
       0.0;0.0;0.0;;
     }
     
-    {C4DMAT_MA_Material_Concrete044C_2K_jpg}
   }
 }

@@ -5,7 +5,7 @@
 
 #include <vector>
 
-// Loads a DirectX .x mesh via D3DXLoadMeshFromX (wide API: D3DXLoadMeshFromXW) and optional textures.
+// Loads static meshes from legacy .x files or Wavefront OBJ/MTL pairs.
 class ModelLoader {
 public:
     ModelLoader() = default;
@@ -22,10 +22,12 @@ public:
      * @note D3DX exposes D3DXLoadMeshFromX / D3DXLoadMeshFromXA / D3DXLoadMeshFromXW; we use the W variant for Unicode paths.
      */
     HRESULT LoadMeshFromX(IDirect3DDevice9* device, const wchar_t* xFilePath);
-
-    HRESULT LoadFromFile(IDirect3DDevice9* device, const wchar_t* xFilePath) {
-        return LoadMeshFromX(device, xFilePath);
-    }
+    // Loads mesh from Wavefront OBJ and optional MTL materials/textures.
+    HRESULT LoadMeshFromObj(IDirect3DDevice9* device, const wchar_t* objFilePath);
+    HRESULT CreateBox(IDirect3DDevice9* device, float width, float height, float depth);
+    HRESULT CreateSphere(IDirect3DDevice9* device, float radius, UINT slices, UINT stacks);
+    // Extension-dispatch helper: currently supports .x and .obj.
+    HRESULT LoadFromFile(IDirect3DDevice9* device, const wchar_t* path);
 
     void Draw(IDirect3DDevice9* device) const;
 

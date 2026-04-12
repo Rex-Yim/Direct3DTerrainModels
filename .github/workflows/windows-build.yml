@@ -1,0 +1,50 @@
+# Build maeg4060_stage2 on Windows (no DXSDK_DIR — CMake fetches Microsoft.DXSDK.D3DX).
+# Download the artifact from the Actions run: unzip and run maeg4060_stage2.exe next to Assets/ and D3DX9_43.dll.
+
+name: Windows build
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: windows-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -B build -S . -G "Visual Studio 17 2022" -A x64
+
+      - name: Build (Release)
+        run: cmake --build build --config Release --parallel
+
+      - name: List Release output
+        shell: pwsh
+        run: Get-ChildItem -Recurse build/Release | Select-Object FullName, Length
+
+      - name: Stage portable folder
+        shell: pwsh
+        run: |
+          $out = Join-Path build Release
+          $pkg = "package"
+          New-Item -ItemType Directory -Force -Path $pkg | Out-Null
+          Copy-Item (Join-Path $out "maeg4060_stage2.exe") $pkg -ErrorAction Stop
+          $dll = Join-Path $out "D3DX9_43.dll"
+          if (Test-Path $dll) { Copy-Item $dll $pkg }
+          Copy-Item (Join-Path $out "Assets") $pkg -Recurse -ErrorAction Stop
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: maeg4060_stage2-windows-x64-Release
+          path: package/
+          if-no-files-found: error

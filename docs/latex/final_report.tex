@@ -99,7 +99,7 @@ Submit the Release binary as \texttt{Game\_Build/maeg4060\_stage2.exe} together 
   \item Entry: \texttt{src/main.cpp}; simulation/render orchestration: \texttt{src/Game.cpp}.
   \item Rendering/device: \texttt{src/Graphics.cpp}; camera: \texttt{src/Camera.cpp}; static meshes: \texttt{src/ModelLoader.cpp}; hierarchy/animation: \texttt{src/AnimatedModel.cpp}; terrain: \texttt{src/Terrain.cpp}; vehicle: \texttt{src/Vehicle.cpp}; collision helpers: \texttt{src/Collision.cpp}; input: \texttt{src/Input.cpp}.
   \item Build: \texttt{CMakeLists.txt} (target \texttt{maeg4060\_stage2}, links \texttt{d3d9}, \texttt{d3dx9}, \texttt{xinput9\_1\_0}).
-  \item Assets: \texttt{Assets/models/*.x}; terrain textures are generated at runtime if no image files are supplied.
+  \item Assets: static props now support \texttt{Assets/models/replacements/*.obj + *.mtl + textures} with fallback to legacy \texttt{Assets/models/*.x}; terrain textures are generated at runtime if no image files are supplied.
 \end{itemize}
 
 \subsection{Screenshots}

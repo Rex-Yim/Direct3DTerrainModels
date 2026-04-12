@@ -2,6 +2,8 @@
 
 #include <d3dx9mesh.h>
 
+#include <filesystem>
+#include <fstream>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -23,6 +25,45 @@ std::wstring AnsiToWide(const char* ansi) {
     std::vector<wchar_t> buf(static_cast<size_t>(n));
     MultiByteToWideChar(CP_ACP, 0, ansi, -1, buf.data(), n);
     return std::wstring(buf.data());
+}
+
+std::string TrimLeftCopy(const std::string& s) {
+    const size_t first = s.find_first_not_of(" \t\r\n");
+    return first == std::string::npos ? std::string() : s.substr(first);
+}
+
+bool ShouldSkipCinema4dLine(const std::string& line) {
+    const std::string trimmed = TrimLeftCopy(line);
+    return trimmed.rfind("//", 0) == 0 || trimmed.rfind("{C4DMAT", 0) == 0;
+}
+
+std::filesystem::path MakeSanitizedXPath(const wchar_t* xFilePath) {
+    if (!xFilePath) {
+        return {};
+    }
+
+    std::ifstream input{std::filesystem::path(xFilePath)};
+    if (!input) {
+        return {};
+    }
+
+    const std::filesystem::path source_path(xFilePath);
+    const std::filesystem::path sanitized_path =
+        std::filesystem::temp_directory_path() / (source_path.stem().wstring() + L"_sanitized.x");
+    std::ofstream output(sanitized_path, std::ios::binary | std::ios::trunc);
+    if (!output) {
+        return {};
+    }
+
+    std::string line;
+    while (std::getline(input, line)) {
+        if (ShouldSkipCinema4dLine(line)) {
+            continue;
+        }
+        output << line << '\n';
+    }
+
+    return output ? sanitized_path : std::filesystem::path();
 }
 
 HRESULT TryLoadTexture(IDirect3DDevice9* device, const char* textureFilename,
@@ -277,6 +318,7 @@ void HierarchyModel::Release() {
         anim_controller_ = nullptr;
     }
     device_ = nullptr;
+    has_animation_ = false;
 }
 
 HRESULT HierarchyModel::Load(IDirect3DDevice9* device, const wchar_t* x_path) {
@@ -291,8 +333,21 @@ HRESULT HierarchyModel::Load(IDirect3DDevice9* device, const wchar_t* x_path) {
     g_alloc_device = device;
     AllocateHierarchy alloc;
     LPD3DXANIMATIONCONTROLLER anim = nullptr;
-    const HRESULT hr = D3DXLoadMeshHierarchyFromX(
+    constexpr HRESULT kD3dxParseError = static_cast<HRESULT>(0x88760390L);
+    HRESULT hr = D3DXLoadMeshHierarchyFromX(
         x_path, D3DXMESH_MANAGED, device, &alloc, nullptr, &root_frame_, &anim);
+    if (hr == kD3dxParseError) {
+        if (anim) {
+            anim->Release();
+            anim = nullptr;
+        }
+        root_frame_ = nullptr;
+        const std::filesystem::path sanitized_path = MakeSanitizedXPath(x_path);
+        if (!sanitized_path.empty()) {
+            hr = D3DXLoadMeshHierarchyFromX(
+                sanitized_path.c_str(), D3DXMESH_MANAGED, device, &alloc, nullptr, &root_frame_, &anim);
+        }
+    }
     g_alloc_device = nullptr;
     g_alloc_tex_dir.clear();
 
@@ -305,11 +360,27 @@ HRESULT HierarchyModel::Load(IDirect3DDevice9* device, const wchar_t* x_path) {
     }
 
     anim_controller_ = anim;
+    has_animation_ = false;
+    if (anim_controller_ && anim_controller_->GetMaxNumAnimationSets() > 0) {
+        LPD3DXANIMATIONSET anim_set = nullptr;
+        if (SUCCEEDED(anim_controller_->GetAnimationSet(0, &anim_set)) && anim_set) {
+            anim_controller_->SetTrackAnimationSet(0, anim_set);
+            anim_controller_->SetTrackPosition(0, 0.0);
+            anim_controller_->SetTrackSpeed(0, 1.0);
+            anim_controller_->SetTrackEnable(0, TRUE);
+            anim_set->Release();
+            has_animation_ = true;
+        }
+    }
+
+    D3DXMATRIX id;
+    D3DXMatrixIdentity(&id);
+    UpdateFrames(root_frame_, &id);
     return S_OK;
 }
 
 void HierarchyModel::AdvanceTime(float dt_seconds) {
-    if (anim_controller_) {
+    if (has_animation_ && anim_controller_) {
         anim_controller_->AdvanceTime(dt_seconds, nullptr);
     }
     D3DXMATRIX id;

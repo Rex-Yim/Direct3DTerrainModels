@@ -21,6 +21,8 @@ public:
     bool Initialize(HWND hwnd, int width, int height);
     /** Resize swap chain / buffers without releasing the device (MANAGED resources stay valid). */
     bool Resize(int width, int height);
+    /** Attempt to recover after D3DERR_DEVICELOST / D3DERR_DEVICENOTRESET. */
+    bool RecoverDevice();
     void Shutdown();
 
     /** Clear + BeginScene. Pair every call with EndFrame(). */
@@ -32,6 +34,7 @@ public:
     IDirect3DDevice9* Device() const { return d3d_device_; }
     int ClientWidth() const { return width_; }
     int ClientHeight() const { return height_; }
+    bool IsDeviceLost() const { return device_lost_; }
     /** True if the last BeginFrame() opened a scene (BeginScene succeeded). */
     bool IsSceneActive() const { return scene_active_; }
 
@@ -40,6 +43,8 @@ public:
 
 private:
     bool CreatePresentParameters(D3DPRESENT_PARAMETERS* out_pp) const;
+    bool ResetDevice();
+    void MarkDeviceLost();
 
     HWND hwnd_ = nullptr;
     int width_ = 0;
@@ -48,5 +53,6 @@ private:
     IDirect3D9* d3d_ = nullptr;
     IDirect3DDevice9* d3d_device_ = nullptr;
     bool scene_active_ = false;
+    bool device_lost_ = false;
     D3DCOLOR clear_color_ = D3DCOLOR_XRGB(135, 206, 235);
 };

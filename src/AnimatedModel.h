@@ -21,9 +21,11 @@ public:
     void Draw(IDirect3DDevice9* device, const D3DXMATRIX* root_world);
 
     bool IsLoaded() const { return root_frame_ != nullptr; }
+    bool HasAnimation() const { return has_animation_; }
 
 private:
     IDirect3DDevice9* device_ = nullptr;
     LPD3DXFRAME root_frame_ = nullptr;
     LPD3DXANIMATIONCONTROLLER anim_controller_ = nullptr;
+    bool has_animation_ = false;
 };
