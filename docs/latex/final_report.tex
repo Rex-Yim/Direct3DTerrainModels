@@ -11,7 +11,8 @@
 \usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{graphicx}
-\graphicspath{{figures/}}
+% Figures live in docs/images/ (repo root of Markdown screenshots); build via docs/Makefile
+\graphicspath{{../images/}}
 \usepackage{pdfpages}
 \usepackage{booktabs}
 \usepackage{amsmath}
@@ -27,10 +28,9 @@
   pdfauthor={Guo Tsun Hei; Yim Fu Chong}
 }
 
-\newcommand{\todo}[1]{\textit{[TODO: #1]}}
-
 \title{%
   MAEG4060 Virtual Reality Systems and Applications\\
+  \large The Chinese University of Hong Kong (CUHK)\\
   \large Course Project -- Final Report}
 \author{%
   \parbox{0.92\linewidth}{\centering
@@ -38,16 +38,14 @@
   \textbf{Group members:}\\[0.35em]
   Guo Tsun Hei (1155186272): 3D Modeling, Texturing, Rigging, and Animation\\
   Yim Fu Chong (1155176974): Programming, Physics Engine, and System Integration}}
-\date{%
-  Submission date: 11 April 2026\\
-  Submission deadline: 17 April 2026}
+\date{Submission deadline: 17 April 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
 \noindent
-We present a DirectX~9.0c fixed-function \textbf{sandbox} (not a scored game) set on procedural mountainous terrain. The user drives a textured vehicle with keyboard or XInput gamepad; a third-person camera follows the chassis. The terrain uses bilinear height sampling, slope-based texture splatting (grass/rock), and surface normals for vehicle orientation. Static props include a crate (AABB) and a loose boulder (bounding sphere with gravity and impulses). A windmill model is loaded through the DirectX frame hierarchy with \texttt{ID3DXAnimationController} when present in the asset. A simple day/night cycle modulates the sun direction, ambient light, and clear colour; an \texttt{ID3DXFont} HUD shows speed and position. The implementation is native Visual C++17 with CMake, satisfying the course requirements for real-time 3D, input, physics-based motion, navigation on geometry, collision, and Maya-exported animation integration.
+We present a DirectX~9.0c fixed-function \textbf{sandbox} (not a scored game) set on procedural mountainous terrain. The user drives a textured vehicle with keyboard or XInput gamepad; a third-person camera follows the chassis. The terrain uses bilinear height sampling, slope-based splatting (grass base plus blended rock, stone, and mountain layers), and surface normals for vehicle orientation. Static props include a crate (AABB) and a loose boulder (bounding sphere with gravity and impulses). A windmill model is loaded through the DirectX frame hierarchy with \texttt{ID3DXAnimationController} when present in the asset. A simple day/night cycle modulates the sun direction, ambient light, and clear colour; an \texttt{ID3DXFont} HUD shows speed and position. The implementation is native Visual C++17 with CMake, satisfying the course requirements for real-time 3D, input, physics-based motion, navigation on geometry, collision, and Maya-exported animation integration.
 \end{abstract}
 
 \tableofcontents
@@ -64,11 +62,11 @@ The environment is an off-road hillside: the player explores a heightfield, inte
 The application is implemented in \textbf{Visual C++} with \textbf{DirectX~9.0c}. It is a technical demonstration / sandbox (\textbf{not} a video game: no missions, no score). Input: \textbf{keyboard} and \textbf{gamepad}. The scene includes \textbf{physical simulation} (e.g.\ gravity, vehicle dynamics, terrain interaction, collisions).
 
 \subsection{Mapping to marking criteria (group project)}
-Table~\ref{tab:marking} lists Stage~3 items from the course project description; use the technical sections below to make each item easy for markers to find.
+Table~\ref{tab:marking} maps Stage~3 marking components from the course project description to sections in this report.
 
 \begin{table}[htbp]
   \centering
-  \caption{Where to address each marked component (typical section pointers --- adjust after writing).}
+  \caption{Marking components and where they are described.}
   \label{tab:marking}
   \begin{tabular}{@{}lll@{}}
     \toprule
@@ -91,7 +89,7 @@ Table~\ref{tab:marking} lists Stage~3 items from the course project description;
 \label{sec:application}
 
 \subsection{Feature overview}
-Procedural terrain mesh with bilinear sampling and two-pass rock splatting; simple longitudinal vehicle dynamics with steering, rolling resistance, and braking; kinematic terrain following (pose from surface normal); chase camera; crate and boulder models with AABB/sphere collision; boulder gravity and impulse from the vehicle hull; hierarchical windmill draw with animation time stepped each frame; day/night lighting and clear colour; on-screen HUD (\texttt{ID3DXFont}); resize-safe device reset path for the font.
+Procedural terrain mesh with bilinear sampling; grass textured base mesh then alpha-blended splats for rock, stone, and mountain where slope/height masks apply (\texttt{src/Terrain.cpp}); simple longitudinal vehicle dynamics with steering, rolling resistance, and braking; kinematic terrain following (pose from surface normal); chase camera; crate and boulder with AABB/sphere collision; boulder under gravity with impulse from the vehicle hull; hierarchical windmill draw with animation time advanced each frame; day/night lighting and clear colour; on-screen HUD (\texttt{ID3DXFont}); resize-safe device reset path for the font.
 
 \subsection{Executable and source layout}
 Submit the Release binary as \texttt{Game\_Build/maeg4060\_stage2.exe} together with \texttt{Game\_Build/Assets/} (see \texttt{scripts/package\_game\_build.bat} or CMake \texttt{install}). Source layout:
@@ -125,7 +123,7 @@ Figures~\ref{fig:shot-sandbox} and~\ref{fig:shot-actions} show the running Direc
 \label{sec:user-guide}
 
 \subsection{System requirements}
-Windows~10 or later (64-bit recommended), DirectX~9 compatible GPU, June 2010 DirectX SDK runtime components, display at least $1280\times720$. Optional Xbox-compatible controller (XInput).
+Windows~10 or later (64-bit recommended), DirectX~9 compatible GPU, display at least $1280\times720$. D3DX is supplied at build time either via the June 2010 DirectX SDK (\texttt{DXSDK\_DIR}) or CMake-downloaded \texttt{Microsoft.DXSDK.D3DX} (see Appendix~\ref{app:build}); the packaged build may include \texttt{D3DX9\_43.dll}. Optional Xbox-compatible controller (XInput).
 
 \subsection{Installation and running}
 Run \texttt{maeg4060\_stage2.exe} from \texttt{Game\_Build} with \texttt{Assets} alongside it, or run from the repo root after CMake sets the VS debugger working directory. Build instructions are in the standalone user guide PDF.
@@ -141,6 +139,7 @@ Run \texttt{maeg4060\_stage2.exe} from \texttt{Game\_Build} with \texttt{Assets}
   W / S & Throttle forward / reverse \\
   A / D & Steer left / right \\
   Space & Brake \\
+  M & Pause / resume windmill animation (when available) \\
   Esc & Exit application \\
   \bottomrule
 \end{tabular}
@@ -189,15 +188,15 @@ The vehicle's up vector is aligned with the \textbf{terrain surface normal}, com
 \subsubsection{Bounding spheres}
 \textbf{Irregular objects} (e.g.\ boulders) use \textbf{bounding sphere} collision: distance between sphere centres compared to the sum of radii. Spheres are cheap to update when objects rotate or roll and pair well with impulse-based response for loose rocks.
 
-\subsubsection{Optional dynamic interaction}
-Where implemented, \textbf{dynamic-to-dynamic} contact allows the vehicle to impart momentum to loose boulders so they roll on slopes and interact with other objects (see \S\ref{sec:bonus}).
+\subsubsection{Dynamic boulder interaction}
+\textbf{Vehicle--boulder} contact applies positional correction and a simple impulse so the boulder can roll on slopes; sphere tests against the vehicle AABB and crate AABB are used (details in \S\ref{sec:bonus}).
 
 \subsection{Physics and simulation}
 \label{sec:techniques-physics}
 Gravity is applied to the boulder as a constant downward acceleration (engine constant $\approx 28$ units/s$^2$ for stable stepping). The vehicle uses semi-implicit longitudinal integration with throttle, rolling resistance, and brake terms (\texttt{src/Vehicle.cpp}).
 
 \subsection{Environmental effects}
-A \textbf{day/night cycle} orbits the directional light and interpolates clear and ambient colours (\texttt{src/Game.cpp}). \textbf{Texture splatting} blends grass and rock in two passes using vertex alpha from slope. The HUD shows speed, world position, simulation time, and windmill load state.
+A \textbf{day/night cycle} orbits the directional light and interpolates clear and ambient colours (\texttt{src/Game.cpp}). \textbf{Texture splatting} draws a grass-textured heightfield, then alpha-blends rock (vertex diffuse alpha from slope), then optional stone and mountain overlays on dedicated vertex streams where mask weights are non-zero. The HUD shows speed, world position, simulation time, and windmill state.
 
 \subsection{Bonus work}
 \label{sec:bonus}
@@ -207,7 +206,7 @@ A \textbf{day/night cycle} orbits the directional light and interpolates clear a
 \section{3D models: sources and modifications}
 \label{sec:models}
 
-Per course requirements, external assets are listed with Sketchfab links and licenses (aligned with the Stage~1 proposal). \textbf{Modifications} should be updated to match what was actually done in Maya and the engine (retopo, materials, wheel hierarchy, scale, UVs, animation export, \ldots).
+Per course requirements, external assets are listed with Sketchfab links and licenses. The \textbf{modifications} bullets summarize how each asset was adapted for this engine (scale, export format, collision, in-engine fallback paths).
 
 \begingroup
 \sloppy
@@ -232,7 +231,7 @@ Per course requirements, external assets are listed with Sketchfab links and lic
       \item Source: Sketchfab
       \item URL: \url{https://sketchfab.com/3d-models/atv-from-game-pure-f2e454611ebd4151b9d7aa31815c35e4}
       \item Usage: Main controllable vehicle model (wheel nodes separated for procedural animation).
-      \item Modifications: Exported to \texttt{model\_jeep.x}; scaled and placed with a world matrix from terrain normal and yaw; collision hull is a tuned AABB.
+      \item Modifications: Shipped as Wavefront OBJ under \texttt{Assets/models/replacements/model\_jeep/} when present, with \texttt{model\_jeep.x} as fallback; scaled and placed with a world matrix from terrain normal and yaw; collision hull is a tuned AABB.
     \end{itemize}
 
   \item \textbf{Rock Boulder (Game Ready Asset)}
@@ -242,7 +241,7 @@ Per course requirements, external assets are listed with Sketchfab links and lic
       \item Source: Sketchfab
       \item URL: \url{https://sketchfab.com/3d-models/rock-boulder-game-ready-asset-0079cb0e717c4aeebe6bca21ec21b0d9}
       \item Usage: Dynamic physics / bounding-sphere collision.
-      \item Modifications: Uniform scale to match gameplay radius $\approx 2.2$; sphere collision and ground contact at terrain height plus radius.
+      \item Modifications: OBJ under \texttt{Assets/models/replacements/model\_boulder/} when present, else \texttt{model\_boulder.x}; uniform scale for gameplay radius $\approx 2.2$; sphere collision and ground contact at terrain height plus radius.
     \end{itemize}
 
   \item \textbf{Windmill}
@@ -252,7 +251,7 @@ Per course requirements, external assets are listed with Sketchfab links and lic
       \item Source: Sketchfab
       \item URL: \url{https://sketchfab.com/3d-models/windmill-fe13862b9e3c4dc887d10e297d86f17f}
       \item Usage: Keyframed animation and environmental aesthetics.
-      \item Modifications: Maya keyframes retained in \texttt{model\_windmill.x}; playback via \texttt{ID3DXAnimationController} when the file contains animation sets.
+      \item Modifications: OBJ under \texttt{replacements/model\_windmill/} when present, else \texttt{model\_windmill.x}; Maya keyframes in \texttt{.x}; playback via \texttt{ID3DXAnimationController} when animation sets exist.
     \end{itemize}
 
   \item \textbf{Wooden Crate}
@@ -262,7 +261,7 @@ Per course requirements, external assets are listed with Sketchfab links and lic
       \item Source: Sketchfab
       \item URL: \url{https://sketchfab.com/3d-models/wooden-crate-3c0259d17f3b4306890cdc809b545670}
       \item Usage: Static collision (AABB).
-      \item Modifications: World placement at $(-35, h, 48)$ with AABB half-extents $(2.2,2.2,2.2)$ for collision.
+      \item Modifications: OBJ under \texttt{replacements/model\_crate/} when present, else \texttt{model\_crate.x}; world placement at $(-35, h, 48)$ with AABB half-extents $(2.2,2.2,2.2)$ for collision.
     \end{itemize}
 \end{enumerate}
 
@@ -288,10 +287,29 @@ The sandbox meets the core Stage~3 requirements in a compact codebase. Known lim
 \appendix
 
 \section{Appendix A: Build configuration}
-Visual Studio 2019 or later toolset recommended; CMake 3.20+; C++17; preprocessor \texttt{UNICODE}/\texttt{\_UNICODE}; \texttt{DXSDK\_DIR} for legacy headers/libs. Use Release builds for submission performance; \texttt{/W4} enabled on MSVC.
+\label{app:build}
 
-\section{Appendix B: Third-party libraries}
-If any (e.g.\ math helpers), list versions and licenses.
+The project is a \textbf{Windows} CMake target \texttt{maeg4060\_stage2} (\texttt{WIN32} subsystem), C++\textbf{17}, \texttt{cmake\_minimum\_required(3.20)}. MSVC is used with warning level \texttt{/W4} and static runtime selection \texttt{MultiThreaded} (Release) / \texttt{MultiThreadedDebug} (Debug). Preprocessor definitions \texttt{UNICODE} and \texttt{\_UNICODE} are set on the main executable (and on the small helper targets \texttt{empty\_window} and \texttt{d3d\_device} in the same \texttt{CMakeLists.txt}).
+
+\textbf{D3DX headers and import library:} either (1)~set environment variable \texttt{DXSDK\_DIR} to the root of the \textbf{June 2010 DirectX SDK} (folders \texttt{Include} and \texttt{Lib/x64} or \texttt{Lib/x86}), or (2)~leave it unset so CMake downloads NuGet package \texttt{Microsoft.DXSDK.D3DX} version \textbf{9.29.952.8} into the build tree on first configure (requires network once), then uses its \texttt{build/native/include} and \texttt{lib} paths. If the NuGet path is used, a post-build step copies \texttt{D3DX9\_43.dll} next to the executable when present.
+
+\textbf{Linked system / redistributable APIs:} \texttt{d3d9}, \texttt{d3dx9}, \texttt{xinput9\_1\_0}. A post-build step copies the \texttt{Assets/} directory beside the built \texttt{.exe}. CMake \texttt{install} installs the game executable, \texttt{Assets/}, and the D3DX DLL when applicable (\texttt{scripts/package\_game\_build.bat} or \texttt{cmake --install} for a \texttt{Game\_Build}-style layout).
+
+\textbf{Recommendation:} Release configuration for markers; Ninja or Visual Studio generators; 64-bit (\texttt{x64}) builds match the documented D3DX library paths.
+
+\section{Appendix B: Third-party libraries and runtime components}
+\label{app:libs}
+
+The application \textbf{does not} link separate general-purpose C++ libraries (no Eigen, Boost, or similar in \texttt{CMakeLists.txt}). Mathematics and mesh helpers use \textbf{D3DX} (\texttt{D3DXMath}, mesh loaders) from the same D3DX stack as Appendix~\ref{app:build}.
+
+\textbf{Microsoft components (linked or loaded at runtime):}
+\begin{itemize}
+  \item \textbf{Direct3D~9} (\texttt{d3d9.dll}) --- system component on Windows; used for device creation, fixed-function pipeline drawing, and textures.
+  \item \textbf{D3DX~9} (\texttt{d3dx9\_*.dll} / import library \texttt{d3dx9.lib}) --- legacy D3DX utilities (math, mesh, font, effect helpers). Headers/libs from June 2010 SDK or from the \texttt{Microsoft.DXSDK.D3DX} NuGet package; redistribution of \texttt{D3DX9\_43.dll} follows Microsoft's terms for that package or the legacy DirectX end-user runtime, as applicable to your distribution channel.
+  \item \textbf{XInput} (\texttt{xinput9\_1\_0.dll}) --- gamepad input; typically present on Windows.
+\end{itemize}
+
+\textbf{3D assets} (Sketchfab models and textures) are listed with licenses in \S\ref{sec:models}; they are data files under \texttt{Assets/}, not compile-time libraries.
 
 \clearpage
 \phantomsection
@@ -307,8 +325,8 @@ The following pages reproduce the submitted user guide (\texttt{User\_Guide.pdf}
 % first sheet follows the intro instead of leaving a title-only page. Remaining pages keep normal breaks.
 \begingroup
 \let\clearpage\relax
-\includepdf[pages=1,offset=0 -14bp]{User_Guide.pdf}
+\includepdf[pages=1,offset=0 -14bp]{../User_Guide.pdf}
 \endgroup
-\includepdf[pages=2-,offset=0 -14bp]{User_Guide.pdf}
+\includepdf[pages=2-,offset=0 -14bp]{../User_Guide.pdf}
 
 \end{document}

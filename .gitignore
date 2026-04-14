@@ -56,7 +56,10 @@ Release/
 *.swp
 *~
 
-# LaTeX intermediates (under docs/latex only)
+# LaTeX build output directory (see docs/Makefile, docs/build-docs.bat)
+docs/.latex-build/
+
+# LaTeX intermediates (legacy; PDFs now emitted to docs/ via build scripts)
 docs/latex/*.aux
 docs/latex/*.log
 docs/latex/*.out

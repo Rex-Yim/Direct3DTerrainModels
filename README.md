@@ -17,10 +17,10 @@ Course project: an interactive **DirectX 9.0c** sandbox on procedural mountainou
 - **Source:** `src/` — entry `main.cpp`, `Game.cpp`, terrain, vehicle, graphics, animation, input.
 - **Build:** `CMakeLists.txt` — target `maeg4060_stage2` (Windows, MSVC, C++17, DirectX 9 / D3DX, optional XInput).
 - **Assets:** `Assets/` — models, textures, terrain references.
-- **Docs:** `docs/latex/` — final report and user guide sources; `docs/user_guide` material as referenced by the course submission.
+- **Docs:** `final_report.pdf` and `User_Guide.pdf` live in **`docs/`** (replace the final report PDF there if you submit an exported copy). LaTeX sources are in **`docs/latex/`**. Rebuild with `make` or `docs/build-docs.bat` (see **`docs/README.md`**).
 
-See **`docs/latex/user_guide.tex`** (and packaged **User Guide PDF**) for controls, requirements, and how to run the executable.
+See **`docs/User_Guide.pdf`** (source: `docs/latex/user_guide.tex`) for controls, requirements, and how to run the executable.
 
 ## License / course
 
-Academic coursework (HKU MAEG4060). Third-party 3D assets are credited in the report (**§3D models: sources and modifications**).
+Academic coursework (CUHK MAEG4060). Third-party 3D assets are credited in the report (section *3D models: sources and modifications*).
