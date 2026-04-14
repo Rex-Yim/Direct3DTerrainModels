@@ -185,9 +185,7 @@ bool LoadHeightsFromHeightmapImage(IDirect3DDevice9* device,
     }
 
     const wchar_t* candidates[] = {
-        L"Assets/terrain/heightmap_1024.png",
-        L"Assets/terrain/heightmap.png",
-        L"Assets/terrain/heightmap.jpg",
+        L"Assets/terrain/shanmai-height.png",
     };
     std::filesystem::path path;
     for (const wchar_t* candidate : candidates) {
@@ -459,23 +457,17 @@ void Terrain::SampleNormal(float world_x, float world_z, D3DXVECTOR3* out_normal
 
 bool Terrain::CreateTextures(IDirect3DDevice9* device) {
     const wchar_t* grass_candidates[] = {
-        L"Assets/terrain/tex_grass.jpg",
-        L"Assets/terrain/tex_grass.png",
+        L"Assets/terrain/caoditietu.jpg",
     };
     const wchar_t* rock_candidates[] = {
-        L"Assets/terrain/tex_rock.jpg",
-        L"Assets/terrain/tex_rock.png",
-        L"Assets/terrain/tex_stone.jpg",
-        L"Assets/terrain/tex_stone.png",
-        L"Assets/terrain/tex_mountain.png",
+        L"Assets/terrain/yanshitietu.jpg",
+        L"Assets/terrain/shitoutietu.jpg",
     };
     const wchar_t* stone_candidates[] = {
-        L"Assets/terrain/tex_stone.jpg",
-        L"Assets/terrain/tex_stone.png",
+        L"Assets/terrain/shitoutietu.jpg",
     };
     const wchar_t* mountain_candidates[] = {
-        L"Assets/terrain/tex_mountain.png",
-        L"Assets/terrain/tex_mountain.jpg",
+        L"Assets/terrain/shanmaitietu.png",
     };
 
     if (!TryLoadTextureCandidates(device, grass_candidates, &grass_tex_) &&

@@ -210,7 +210,7 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     const StaticModelLoadResult jeep_load = LoadStaticModelCandidates(device, &jeep_, jeep_candidates);
     if (FAILED(jeep_load.hr) || !jeep_.IsLoaded()) {
         const HRESULT fallback_hr =
-            jeep_.CreateBox(device, 4.6f, 1.8f, 2.4f, L"Assets/terrain/tex_stone.jpg");
+            jeep_.CreateBox(device, 4.6f, 1.8f, 2.4f, L"Assets/terrain/shitoutietu.jpg");
         if (FAILED(fallback_hr) || !jeep_.IsLoaded()) {
             init_error_ = L"Jeep model failed.\nResolved path: ";
             init_error_ += jeep_load.resolved_path.empty() ? std::wstring(L"<none>") : jeep_load.resolved_path.native();
@@ -254,7 +254,8 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     const StaticModelLoadResult crate_load = LoadStaticModelCandidates(device, &crate_, crate_candidates);
     if (FAILED(crate_load.hr) || !crate_.IsLoaded()) {
         const HRESULT fallback_hr =
-            crate_.CreateBox(device, 4.4f, 4.4f, 4.4f, L"Assets/terrain/tex_crate.png");
+            crate_.CreateBox(device, 4.4f, 4.4f, 4.4f,
+                             L"Assets/models/replacements/model_crate/muxiangtietu.png");
         if (FAILED(fallback_hr) || !crate_.IsLoaded()) {
             init_error_ = L"Crate model failed.\nResolved path: ";
             init_error_ += crate_load.resolved_path.empty() ? std::wstring(L"<none>") : crate_load.resolved_path.native();
@@ -275,7 +276,7 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
         LoadStaticModelCandidates(device, &boulder_mesh_, boulder_candidates);
     if (FAILED(boulder_load.hr) || !boulder_mesh_.IsLoaded()) {
         const HRESULT fallback_hr = boulder_mesh_.CreateSphere(device, boulder_radius_, 20, 14,
-                                                               L"Assets/terrain/tex_rock.jpg");
+                                                               L"Assets/terrain/yanshitietu.jpg");
         if (FAILED(fallback_hr) || !boulder_mesh_.IsLoaded()) {
             init_error_ = L"Boulder model failed.\nResolved path: ";
             init_error_ += boulder_load.resolved_path.empty() ? std::wstring(L"<none>") : boulder_load.resolved_path.native();
@@ -728,13 +729,9 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
     D3DXMatrixMultiply(&wj_final, &jeep_local_correction_, &wj);
     device->SetTransform(D3DTS_WORLD, &wj_final);
     DWORD prev_cull = D3DCULL_CCW;
-    DWORD prev_lighting = TRUE;
     device->GetRenderState(D3DRS_CULLMODE, &prev_cull);
-    device->GetRenderState(D3DRS_LIGHTING, &prev_lighting);
     device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
-    device->SetRenderState(D3DRS_LIGHTING, FALSE);
     jeep_.Draw(device);
-    device->SetRenderState(D3DRS_LIGHTING, prev_lighting);
     device->SetRenderState(D3DRS_CULLMODE, prev_cull);
 
     device->SetTransform(D3DTS_WORLD, &id);

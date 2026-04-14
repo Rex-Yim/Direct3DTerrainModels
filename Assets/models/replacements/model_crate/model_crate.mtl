@@ -7,13 +7,13 @@ Ks 0 0 0
 Ke 0 0 0
 Ns 1
 illum 2
-map_Kd jeep_basecolor.jpg
+map_Kd muxiangtietu.png
 
-newmtl C4DMAT___
+newmtl C4DMAT_Material__418
 Kd 1 1 1
-Ks 0.453000009 0.453000009 0.453000009
+Ks 0 0 0
 Ke 0 0 0
 Ns 1
 illum 2
-map_Kd jeep_basecolor.jpg
+map_Kd muxiangtietu.png
 

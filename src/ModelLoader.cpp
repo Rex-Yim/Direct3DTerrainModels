@@ -264,32 +264,30 @@ void ApplyInferTerrainTexturesIfMissing(IDirect3DDevice9* device,
     }
 
     const std::string stem_lower = ToLowerCopy(model_path.stem().string());
-    const char* tex = nullptr;
+    const wchar_t* tex_rel = nullptr;
     if (stem_lower.find("crate") != std::string::npos) {
-        tex = "tex_crate.png";
+        tex_rel = L"Assets/models/replacements/model_crate/muxiangtietu.png";
     } else if (stem_lower.find("boulder") != std::string::npos) {
-        tex = "tex_rock.jpg";
+        tex_rel = L"Assets/models/replacements/model_boulder/yanshitietu.jpg";
     } else if (stem_lower.find("jeep") != std::string::npos) {
-        tex = "tex_stone.jpg";
+        tex_rel = L"Assets/terrain/shitoutietu.jpg";
     } else if (stem_lower.find("windmill") != std::string::npos) {
-        tex = "tex_stone.jpg";
+        tex_rel = L"Assets/models/replacements/model_windmill/Muehle_BaseColor.jpg";
     }
-    if (!tex) {
+    if (!tex_rel) {
         return;
     }
 
-    const std::filesystem::path resolved = ResolveAssetPathW(
-        (std::wstring(L"Assets/terrain/") + AnsiToWide(tex)).c_str());
+    const std::filesystem::path resolved = ResolveAssetPathW(tex_rel);
     if (resolved.empty()) {
         return;
     }
 
-    const std::filesystem::path terrain_dir = resolved.parent_path();
     for (size_t i = 0; i < textures->size(); ++i) {
         if ((*textures)[i]) {
             continue;
         }
-        TryLoadTexture(device, tex, terrain_dir, &(*textures)[i]);
+        D3DXCreateTextureFromFileW(device, resolved.c_str(), &(*textures)[i]);
     }
 }
 

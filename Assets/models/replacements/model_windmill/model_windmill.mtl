@@ -1,0 +1,34 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v6.0.0)
+
+newmtl C4DMAT_NONE
+Kd 1 1 1
+Ks 0 0 0
+Ke 0 0 0
+Ns 1
+illum 2
+
+newmtl C4DMAT_Muehle
+Kd 1 1 1
+Ks 0.368000001 0.368000001 0.368000001
+Ke 0 0 0
+Ns 1
+illum 2
+map_Kd Muehle_BaseColor.jpg
+
+newmtl C4DMAT_sockel
+Kd 1 1 1
+Ks 0.368000001 0.368000001 0.368000001
+Ke 0 0 0
+Ns 1
+illum 2
+map_Kd sockel_BaseColor.jpg
+
+newmtl C4DMAT_GelaenderWindrad
+Kd 1 1 1
+Ks 0.368000001 0.368000001 0.368000001
+Ke 0 0 0
+Ns 1
+illum 2
+map_Kd GelaenderWindrad_BaseColor.jpg
+
