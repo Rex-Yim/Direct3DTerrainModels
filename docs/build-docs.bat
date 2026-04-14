@@ -14,12 +14,12 @@ if errorlevel 1 exit /b 1
 popd
 copy /Y ".latex-build\user_guide.pdf" "User_Guide.pdf" >nul
 
-echo === latexmk: final_report.pdf ===
+echo === latexmk: final_stage_report.pdf ===
 pushd latex
-latexmk -pdf -interaction=nonstopmode -f -outdir=..\.latex-build final_report.tex
+latexmk -pdf -interaction=nonstopmode -f -outdir=..\.latex-build final_stage_report.tex
 if errorlevel 1 exit /b 1
 popd
-copy /Y ".latex-build\final_report.pdf" ".\"
+copy /Y ".latex-build\final_stage_report.pdf" ".\"
 
 goto :done
 
@@ -34,16 +34,16 @@ if errorlevel 1 exit /b 1
 popd
 copy /Y ".latex-build\user_guide.pdf" "User_Guide.pdf" >nul
 
-echo === pdflatex: final_report.pdf ===
+echo === pdflatex: final_stage_report.pdf ===
 pushd latex
-pdflatex -interaction=nonstopmode -output-directory=..\.latex-build final_report.tex
+pdflatex -interaction=nonstopmode -output-directory=..\.latex-build final_stage_report.tex
 if errorlevel 1 exit /b 1
-pdflatex -interaction=nonstopmode -output-directory=..\.latex-build final_report.tex
+pdflatex -interaction=nonstopmode -output-directory=..\.latex-build final_stage_report.tex
 if errorlevel 1 exit /b 1
-pdflatex -interaction=nonstopmode -output-directory=..\.latex-build final_report.tex
+pdflatex -interaction=nonstopmode -output-directory=..\.latex-build final_stage_report.tex
 if errorlevel 1 exit /b 1
 popd
-copy /Y ".latex-build\final_report.pdf" ".\"
+copy /Y ".latex-build\final_stage_report.pdf" ".\"
 
 :done
 echo Done. PDFs are in: %cd%
