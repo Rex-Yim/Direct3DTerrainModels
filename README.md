@@ -6,13 +6,15 @@ Course project: an interactive **DirectX 9.0c** sandbox on procedural mountainou
 
 ## Screenshots
 
-**Running build** — terrain splatting, windmill, props, and HUD:
+Crops match **Figure 1** and **Figure 2** in `docs/stageFinal.pdf` (same trimming as the LaTeX build).
 
-![Sandbox: terrain, windmill, props, and HUD](docs/images/screenshot_sandbox_windmill.png)
+**Figure 1 — Running build:** terrain splatting, windmill, props, and HUD.
 
-**CI** — GitHub Actions run for the *boulder and windmill models* workflow, with the application visible in the run summary:
+![Figure 1: in-application sandbox](docs/images/readme_crop_figure1_sandbox.png)
 
-![GitHub Actions run with sandbox inset](docs/images/screenshot_github_actions_run.png)
+**Figure 2 — CI:** GitHub Actions run for the *boulder and windmill models* workflow, with the application visible in the run summary.
+
+![Figure 2: GitHub Actions run with sandbox inset](docs/images/readme_crop_figure2_ci.png)
 
 **Cinema 4D viewports** (same sessions as `docs/media/c4d-*.mp4`; GIFs for inline README playback):
 

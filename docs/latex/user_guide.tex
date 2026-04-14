@@ -1,97 +1,178 @@
-% MAEG4060 — User Guide (standalone PDF)
+% MAEG4060 — User Guide (standalone PDF; matches stageFinal visual theme)
 \documentclass[11pt,a4paper]{article}
 
-\usepackage[margin=2.5cm]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage{microtype}
+\usepackage{graphicx}
+\graphicspath{{../images/}}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{url}
-\usepackage[hidelinks,breaklinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{setspace}
+\usepackage[margin=2.4cm,bindingoffset=0pt,footskip=28pt]{geometry}
+\usepackage[breaklinks,colorlinks=true,bookmarksopen=true]{hyperref}
+
+% --- Visual theme (same family as stageFinal: muted slate / blue, print-friendly) ---
+\definecolor{Brand}{HTML}{1e3a5f}
+\definecolor{BrandLight}{HTML}{3d5a80}
+\definecolor{AbstractBg}{HTML}{f7f9fc}
+\definecolor{AbstractFrame}{HTML}{c5d0e0}
+\definecolor{RuleGray}{HTML}{94a3b8}
+
+\hypersetup{
+  pdftitle={MAEG4060 User Guide},
+  pdfauthor={Guo Tsun Hei; Yim Fu Chong},
+  linkcolor=BrandLight,
+  urlcolor=BrandLight,
+  citecolor=BrandLight,
+}
 
 \makeatletter
-\g@addto@macro\UrlBreaks{\do\/\do-\do\.\do\=}
+\g@addto@macro\UrlBreaks{\do\/\do-\do\.\do\_\do\=}
 \makeatother
 
+\setstretch{1.06}
+
+\captionsetup{
+  font=small,
+  labelfont=bf,
+  textfont=it,
+  margin=0.6cm,
+  skip=8pt,
+}
+
+% Section styling (aligned with stageFinal)
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}%
+  {-2.8ex \@plus -1ex \@minus -.2ex}%
+  {1.4ex \@plus .2ex}%
+  {\reset@font\Large\bfseries\color{Brand}}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
+  {-2.2ex \@plus -1ex \@minus -.2ex}%
+  {0.85ex \@plus .2ex}%
+  {\reset@font\large\bfseries\color{BrandLight}}}
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
+  {-1.9ex \@plus -0.6ex \@minus -.15ex}%
+  {0.7ex \@plus .12ex}%
+  {\reset@font\normalsize\bfseries\color{BrandLight}}}
+\makeatother
+
+\newcommand{\sectionrule}{%
+  \par\vspace{-0.35em}\noindent{\color{RuleGray}\rule{\linewidth}{0.55pt}}\par\vspace{0.6em}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\scshape MAEG4060 --- User Guide}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\small\textcolor{RuleGray}{The Chinese University of Hong Kong}}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyfoot[C]{\small\textcolor{RuleGray}{The Chinese University of Hong Kong}}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+% Short intro block (mirrors reportabstract spacing without loading extra environments)
+\newenvironment{guideintro}{%
+  \par\vspace{0.5em}%
+  {\color{RuleGray}\hrule height 0.55pt}%
+  \par\vspace{0.45em}%
+  \begin{quotation}\small
+  \noindent\textcolor{Brand}{\textbf{About this guide.}}\quad\ignorespaces
+}{%
+  \end{quotation}%
+  \par\vspace{0.35em}%
+  {\color{RuleGray}\hrule height 0.55pt}%
+  \par\vspace{0.75em}%
+}
+
+% Inline tip: asset path / working directory reminders
+\newcommand{\guidetip}[1]{%
+  \par\smallskip\noindent\fcolorbox{AbstractFrame}{AbstractBg}{%
+    \begin{minipage}[c]{0.97\linewidth}\small\textcolor{Brand}{\textbf{Tip.}}\quad #1\end{minipage}}%
+  \par\smallskip}
+
+% --- Title ---
 \title{%
-  MAEG4060 Course Project\\
-  \large User Guide}
+  {\Large\bfseries\color{Brand}MAEG4060}\quad
+  {\large\color{BrandLight}Virtual Reality Systems and Applications}\\[0.85em]
+  {\Large Course Project --- User Guide}\\[0.35em]
+  {\normalsize\color{RuleGray}Interactive Physical Simulation of Off-Road Vehicle Dynamics}\\[0.5em]
+  {\normalsize The Chinese University of Hong Kong (CUHK)}}
 \author{%
-  Interactive Physical Simulation of Off-Road Vehicle Dynamics\\
-  \small Guo Tsun Hei; Yim Fu Chong}
-\date{April 2026}
+  \begin{minipage}{0.92\linewidth}\centering
+  \textbf{Group:} Guo Tsun Hei;\quad Yim Fu Chong\\[0.35em]
+  \small\textcolor{RuleGray}{April 2026}
+  \end{minipage}}
+\date{}
 
 \begin{document}
+\renewcommand{\figurename}{\textcolor{Brand}{Figure}}
 \maketitle
+\thispagestyle{empty}
+\vspace*{-1.2em}
 
-\section{How to start the application}
+\begin{guideintro}
+This PDF explains how to \textbf{launch} the DirectX~9 sandbox, what \textbf{hardware} is expected, how \textbf{keyboard and gamepad} inputs map to the vehicle, and how to fix common \textbf{runtime issues}. Build-from-source and CI notes are grouped at the end for developers.
+\end{guideintro}
 
+\section{Launch the application}\label{sec:launch}\sectionrule
+
+\subsection{Game build (markers and end users)}
 \begin{itemize}
-  \item Open the \texttt{Game\_Build} folder in your submission package (or run from the repository root after a local build; see below).
-  \item \textbf{Double-click} \texttt{maeg4060\_stage2.exe} in that folder to launch the program.
-  \item Keep the executable beside the \texttt{Assets} folder so paths such as \texttt{Assets/models/model\_jeep.x} resolve. If models fail to load, confirm the working directory contains \texttt{Assets}.
+  \item Open the \texttt{Game\_Build} folder from your submission package (or use a folder produced by \texttt{cmake --install} / \texttt{scripts/package\_game\_build.bat}).
+  \item \textbf{Double-click} \texttt{maeg4060\_stage2.exe}. Keep the executable in the same directory as the bundled \texttt{Assets} tree.
 \end{itemize}
 
-\subsection{Building from source (optional)}
+\guidetip{If meshes or textures fail to load, you are almost certainly running the \texttt{.exe} with the wrong working directory. Launch from the folder that contains both \texttt{maeg4060\_stage2.exe} and \texttt{Assets/}, or confirm that relative paths such as \texttt{Assets/models/\ldots} resolve. Optional replacement OBJ/MTL props live under \texttt{Assets/models/replacements/} (see \texttt{README.md} there).}
 
-The project is a CMake target (\texttt{maeg4060\_stage2}) that needs legacy \textbf{D3DX} headers and import libraries (\texttt{d3dx9.h}, \texttt{d3dx9math.h}, etc.), which are \emph{not} supplied by the Windows 10/11 SDK alone. CMake resolves them in one of two ways: (1)~set \texttt{DXSDK\_DIR} to the root of the \textbf{June 2010 DirectX SDK} (must contain \texttt{Include} and \texttt{Lib}); or (2)~leave \texttt{DXSDK\_DIR} unset and let CMake download the \texttt{Microsoft.DXSDK.D3DX} NuGet package into the build directory on first configure (requires network access; configure may take several minutes).
+\begin{figure}[htbp]
+  \centering
+  \fcolorbox{AbstractFrame}{white}{%
+    \includegraphics[trim=22 30 22 42,clip,width=0.92\linewidth]{screenshot_sandbox_windmill.png}}
+  \caption{Example window: terrain splats, vehicle, props, windmill, and HUD.}
+  \label{fig:runtime}
+\end{figure}
 
-\textbf{Recommended (matches \texttt{scripts/configure\_build\_release.bat}):} run \texttt{vcvars64.bat} from your Visual Studio installation so \texttt{cl} is on \texttt{PATH}, then from the repository root use the Ninja generator and select MSVC explicitly, for example:
-\begin{verbatim}
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release ^
-  -DCMAKE_CXX_COMPILER=cl -DCMAKE_C_COMPILER=cl
-cmake --build build
-\end{verbatim}
-On some setups the Visual Studio CMake generator fails to detect a C++ compiler even after \texttt{vcvars64}; Ninja with \texttt{-DCMAKE\_CXX\_COMPILER=cl} avoids that. If you change the generator in an existing build tree, delete the \texttt{build} folder (or remove \texttt{CMakeCache.txt} and the \texttt{CMakeFiles} directory) before re-running \texttt{cmake}.
-
-If the compiler stops with \textbf{C1060} (out of heap space), retry the build with less parallelism, e.g.\ \texttt{cmake --build build -j 1}, and close other heavy applications.
-
-Alternatively, from the repository root: \texttt{cmake -B build -G "Visual Studio 17 2022" -A x64}, then \texttt{cmake --build build --config Release}, provided the toolset is detected correctly.
-
-To package binaries: run \texttt{scripts/package\_game\_build.bat} to populate \texttt{Game\_Build}, or \texttt{cmake --install build --prefix Game\_Build}.
-
-\subsection{GitHub Actions (optional)}
-
-If \texttt{.github/workflows/windows-build.yml} is enabled on your fork, the \textbf{Windows build} workflow on \texttt{windows-latest} produces an artifact (zip) containing \texttt{maeg4060\_stage2.exe}, \texttt{D3DX9\_43.dll} when the NuGet D3DX path is used, and a copy of \texttt{Assets/}. Download the artifact, unzip on Windows, and run the executable from that folder (keep \texttt{Assets} beside the \texttt{.exe}).
-
-\section{Hardware and software requirements}
+\section{Hardware and software}\sectionrule
 
 \begin{itemize}
-  \item \textbf{Platform:} Windows PC (64-bit Windows recommended).
-  \item \textbf{Graphics API:} The application uses \textbf{DirectX~9.0c}. You need a DirectX~9-compatible GPU and the \textbf{DirectX~9 End-User Runtime} (or equivalent system components) installed as required by your Windows version.
-  \item \textbf{Display:} A desktop resolution of at least \textbf{1280$\times$720} is recommended; other resolutions are supported when the window is resized.
-  \item \textbf{Optional input:} An \textbf{XInput-compatible gamepad} (e.g.\ Xbox controller) for analog control. Keyboard control works without a gamepad.
+  \item \textbf{Platform:} 64-bit \textbf{Windows} (recommended).
+  \item \textbf{Graphics:} \textbf{DirectX~9.0c} rendering path; GPU and drivers should support D3D9. Install the \textbf{DirectX~9 End-User Runtime} (or ensure equivalent system components) if you see missing-D3D errors.
+  \item \textbf{Display:} At least \textbf{1280$\times$720}; the window can be resized.
+  \item \textbf{Input (optional):} \textbf{XInput-compatible} gamepad (e.g.\ Xbox controller) for analog throttle and steering. Keyboard control works without a pad.
 \end{itemize}
 
-\section{Controls}
+\section{Controls}\sectionrule
 
-\subsection{Keyboard (WASD and related keys)}
-
-Input is handled via the Win32 keyboard API (\texttt{GetAsyncKeyState}) with a vehicle-style layout, for example:
+\subsection{Keyboard}
 
 \begin{center}
-\begin{tabular}{@{}ll@{}}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.34\linewidth}p{0.52\linewidth}@{}}
   \toprule
-  \textbf{Input} & \textbf{Action} \\
+  \textbf{Key} & \textbf{Action} \\
   \midrule
   W / S & Forward / reverse (throttle) \\
   A / D & Steer left / right \\
   Space & Brake (or hand brake, depending on build) \\
-  M & Pause / resume windmill motion (Maya animation when present, or simple spin for the static mesh fallback) \\
-  Esc & Quit application \\
+  M & Pause / resume windmill motion (animation when present; otherwise simple spin) \\
+  Esc & Exit the application \\
   \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent
-Exact key bindings may match the on-screen HUD or readme in the binary package; the layout above reflects the project design (WASD movement with separate brake).
+Bindings follow the project implementation (\texttt{GetAsyncKeyState}). If your package includes on-screen hints, treat those as authoritative for that build.
 
 \subsection{Gamepad (XInput)}
 
-With an XInput controller connected, the application maps analog axes and triggers for smoother control than the keyboard:
-
 \begin{center}
-\begin{tabular}{@{}ll@{}}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.34\linewidth}p{0.52\linewidth}@{}}
   \toprule
   \textbf{Control} & \textbf{Action} \\
   \midrule
@@ -103,15 +184,52 @@ With an XInput controller connected, the application maps analog axes and trigge
 \end{center}
 
 \noindent
-Triggers provide analog throttle similar to a real vehicle; keyboard W/S act as digital throttle inputs.
+Triggers approximate analog throttle; keyboard W/S remain digital.
 
-\section{Troubleshooting}
+\section{Troubleshooting}\sectionrule
 
 \begin{itemize}
-  \item \textbf{Missing DLLs or DirectX errors:} Install or repair the DirectX~9 end-user runtime and ensure GPU drivers are up to date.
-  \item \textbf{Black screen or failed device creation:} Try windowed mode, update graphics drivers, and confirm no other application has exclusive full-screen access to the GPU.
-  \item \textbf{Assets not found:} Run from \texttt{Game\_Build} with the supplied \texttt{Assets} (or equivalent) folder beside the executable. For static prop replacements, place OBJ/MTL files under \texttt{Assets/models/replacements} (see \texttt{Assets/models/replacements/README.md}).
-  \item \textbf{Gamepad not detected:} Use a wired connection or official wireless adapter; confirm the controller appears in Windows as an XInput device.
+  \item \textbf{Missing DLLs / DirectX errors:} Repair or install the DirectX~9 end-user runtime; update the GPU driver.
+  \item \textbf{Black screen or device creation failure:} Prefer windowed operation first, close other exclusive full-screen apps, then retry after a driver update.
+  \item \textbf{Assets not found:} Run from the folder layout in Section~\ref{sec:launch}; verify \texttt{Assets/} sits beside the executable.
+  \item \textbf{Gamepad ignored:} Prefer a wired connection or official wireless adapter; confirm Windows lists the device as XInput.
 \end{itemize}
+
+\section{Build from source (developers)}\sectionrule
+
+The CMake target \texttt{maeg4060\_stage2} expects legacy \textbf{D3DX} headers and import libraries (\texttt{d3dx9.h}, \texttt{d3dx9math.h}, \ldots), which the Windows 10/11 SDK alone does not provide. Configuration uses either:
+\begin{itemize}
+  \item \textbf{June 2010 DirectX SDK:} set \texttt{DXSDK\_DIR} to an installation whose \texttt{Include/} and \texttt{Lib/} trees CMake can consume; \emph{or}
+  \item \textbf{NuGet D3DX:} leave \texttt{DXSDK\_DIR} unset and allow CMake to fetch \texttt{Microsoft.DXSDK.D3DX} on first configure (requires network; first configure may take several minutes).
+\end{itemize}
+
+\noindent\textbf{Suggested command line} (matches \path{scripts/configure_build_release.bat}):\par
+\smallskip\noindent
+Run \path{vcvars64.bat} from your Visual Studio install, then from the repository root:
+\begin{verbatim}
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_CXX_COMPILER=cl -DCMAKE_C_COMPILER=cl
+cmake --build build
+\end{verbatim}
+\noindent
+Ninja with an explicit \texttt{-DCMAKE\_CXX\_COMPILER=cl} avoids some generator detection issues seen with the Visual Studio CMake workflow. If you switch generators, delete the \path{build} directory (or wipe \texttt{CMakeCache.txt} and \texttt{CMakeFiles/}) before reconfiguring.
+
+If the compiler reports \textbf{C1060} (compiler out of heap space), rebuild with less parallelism, e.g.\ \texttt{cmake --build build -j 1}.
+
+\smallskip\noindent
+\textbf{Alternative (Visual Studio generator):}
+\begin{verbatim}
+cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release
+\end{verbatim}
+\noindent
+Use this when the toolset is detected correctly.
+
+\smallskip\noindent
+\textbf{Package output:} run \path{scripts/package_game_build.bat}, or \texttt{cmake --install build --prefix Game\_Build}, to populate \path{Game_Build/}.
+
+\section{GitHub Actions (optional)}\sectionrule
+
+If enabled on your fork, \texttt{.github/workflows/windows-build.yml} builds on \texttt{windows-latest} and publishes a zip containing \texttt{maeg4060\_stage2.exe}, \texttt{D3DX9\_43.dll} when the NuGet D3DX path is used, and a copy of \texttt{Assets/}. Unzip on Windows and run the executable from that folder with \texttt{Assets} alongside it.
 
 \end{document}

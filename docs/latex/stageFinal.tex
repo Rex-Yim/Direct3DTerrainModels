@@ -341,6 +341,65 @@ Representative frames from screen recordings under \texttt{docs/media/}; GIF var
 \texttt{docs/media/c4d-windmill-viewport.mp4}.\\
 GIFs for the GitHub README live under \texttt{docs/images/}.
 
+\subsubsection{Mobile browser views (public repository)}
+\begingroup\sloppy
+\noindent Phone screenshots below show how the \textbf{public GitHub repository} and its \textbf{README} look on a narrow viewport: landing page, Actions history, and scrolled README (runtime/CI embeds, then authoring tables). They complement Figures~\ref{fig:runtime}--\ref{fig:c4d-windmill} with a typical mobile reading context.
+\endgroup
+
+\begin{figure}[htbp]
+  \centering
+  \setlength{\fboxsep}{3pt}%
+  \setlength{\fboxrule}{0.55pt}%
+  \begin{minipage}[t]{0.46\linewidth}\centering\sloppy
+    \fcolorbox{AbstractFrame}{white}{%
+      \includegraphics[width=0.98\linewidth]{mobile_github_repo_landing.png}}\\[0.35em]
+    {\footnotesize(\textit{a})~Repository home: description and file tree.}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.46\linewidth}\centering\sloppy
+    \fcolorbox{AbstractFrame}{white}{%
+      \includegraphics[width=0.98\linewidth]{mobile_github_actions_windows_build.png}}\\[0.35em]
+    {\footnotesize(\textit{b})~\texttt{Actions}: \texttt{windows-build.yml} run history.}
+  \end{minipage}
+  \caption{GitHub project page on a mobile browser: public landing view and Windows CI runs.}
+  \label{fig:mobile-github}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \setlength{\fboxsep}{3pt}%
+  \setlength{\fboxrule}{0.55pt}%
+  \begin{minipage}[t]{0.46\linewidth}\centering\sloppy
+    \fcolorbox{AbstractFrame}{white}{%
+      \includegraphics[width=0.98\linewidth]{mobile_readme_runtime_section.png}}\\[0.35em]
+    {\footnotesize(\textit{a})~README: \textbf{Screenshots} section (in-engine view).}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.46\linewidth}\centering\sloppy
+    \fcolorbox{AbstractFrame}{white}{%
+      \includegraphics[width=0.98\linewidth]{mobile_readme_ci_section.png}}\\[0.35em]
+    {\footnotesize(\textit{b})~README: CI summary embed and start of \textbf{Repository layout}.}
+  \end{minipage}
+  \caption{README on a phone: embedded runtime imagery and continuous-integration evidence.}
+  \label{fig:mobile-readme-runtime-ci}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \setlength{\fboxsep}{3pt}%
+  \setlength{\fboxrule}{0.55pt}%
+  \begin{minipage}[t]{0.46\linewidth}\centering\sloppy
+    \fcolorbox{AbstractFrame}{white}{%
+      \includegraphics[width=0.98\linewidth]{mobile_readme_authoring_media_a.png}}\\[0.35em]
+    {\footnotesize(\textit{a})~Cinema~4D viewport GIFs and modeling stills (tables).}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.46\linewidth}\centering\sloppy
+    \fcolorbox{AbstractFrame}{white}{%
+      \includegraphics[width=0.98\linewidth]{mobile_readme_authoring_media_b.png}}\\[0.35em]
+    {\footnotesize(\textit{b})~Same README region with recording links and layout header.}
+  \end{minipage}
+  \caption{README on a phone: authoring/source-mesh media referenced from \S\ref{sec:assets}.}
+  \label{fig:mobile-readme-authoring}
+\end{figure}
+
 \section{Build and packaging notes}\sectionrule
 \label{sec:build}
 
