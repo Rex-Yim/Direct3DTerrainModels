@@ -49,6 +49,8 @@ private:
     Vehicle vehicle_;
     ModelLoader jeep_;
     D3DXMATRIX jeep_local_correction_{};
+    ModelLoader jeep_debug_proxy_;
+    bool debug_draw_jeep_proxy_ = true;
     ModelLoader crate_;
     ModelLoader boulder_mesh_;
     HierarchyModel windmill_;

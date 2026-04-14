@@ -247,6 +247,10 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
             }
         }
     }
+    if (debug_draw_jeep_proxy_) {
+        jeep_debug_proxy_.Unload();
+        jeep_debug_proxy_.CreateBox(device, 2.4f, 1.2f, 4.8f, nullptr);
+    }
 
     // Legacy .x props can include broken helper/shadow geometry; prefer OBJ replacements only.
     const auto crate_candidates =
@@ -350,6 +354,7 @@ void Game::Shutdown() {
     windmill_anim_paused_ = false;
     boulder_mesh_.Unload();
     crate_.Unload();
+    jeep_debug_proxy_.Unload();
     jeep_.Unload();
     terrain_.Shutdown();
     hwnd_ = nullptr;
@@ -727,7 +732,19 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
     D3DXMATRIX wj_final;
     D3DXMatrixMultiply(&wj_final, &jeep_local_correction_, &wj);
     device->SetTransform(D3DTS_WORLD, &wj_final);
+    DWORD prev_cull = D3DCULL_CCW;
+    device->GetRenderState(D3DRS_CULLMODE, &prev_cull);
+    device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
     jeep_.Draw(device);
+    device->SetRenderState(D3DRS_CULLMODE, prev_cull);
+    if (debug_draw_jeep_proxy_ && jeep_debug_proxy_.IsLoaded()) {
+        D3DXMATRIX proxy_scale;
+        D3DXMATRIX proxy_world;
+        D3DXMatrixScaling(&proxy_scale, 1.05f, 1.05f, 1.05f);
+        D3DXMatrixMultiply(&proxy_world, &proxy_scale, &wj);
+        device->SetTransform(D3DTS_WORLD, &proxy_world);
+        jeep_debug_proxy_.Draw(device);
+    }
 
     device->SetTransform(D3DTS_WORLD, &id);
     DrawHud(device, client_w, client_h);
