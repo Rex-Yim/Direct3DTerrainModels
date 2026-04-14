@@ -236,20 +236,16 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
             // Imported replacements can be authored far from origin and at very large scales.
             // Normalize only when bounds are clearly out-of-scene so native assets stay unchanged.
             if (max_extent > 50.0f || center_len_sq > (100.0f * 100.0f)) {
-                const float target_size = 4.8f;
+                const float target_size = 5.4f;
                 const float scale =
                     (max_extent > 1e-3f) ? std::clamp(target_size / max_extent, 0.001f, 5.0f) : 1.0f;
                 D3DXMATRIX sc;
                 D3DXMATRIX tr;
                 D3DXMatrixScaling(&sc, scale, scale, scale);
-                D3DXMatrixTranslation(&tr, -center.x, -mn.y, -center.z);
+                D3DXMatrixTranslation(&tr, -center.x, -mn.y + (0.35f / scale), -center.z);
                 D3DXMatrixMultiply(&jeep_local_correction_, &tr, &sc);
             }
         }
-    }
-    if (debug_draw_jeep_proxy_) {
-        jeep_debug_proxy_.Unload();
-        jeep_debug_proxy_.CreateBox(device, 2.4f, 1.2f, 4.8f, nullptr);
     }
 
     // Legacy .x props can include broken helper/shadow geometry; prefer OBJ replacements only.
@@ -354,7 +350,6 @@ void Game::Shutdown() {
     windmill_anim_paused_ = false;
     boulder_mesh_.Unload();
     crate_.Unload();
-    jeep_debug_proxy_.Unload();
     jeep_.Unload();
     terrain_.Shutdown();
     hwnd_ = nullptr;
@@ -733,18 +728,14 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
     D3DXMatrixMultiply(&wj_final, &jeep_local_correction_, &wj);
     device->SetTransform(D3DTS_WORLD, &wj_final);
     DWORD prev_cull = D3DCULL_CCW;
+    DWORD prev_lighting = TRUE;
     device->GetRenderState(D3DRS_CULLMODE, &prev_cull);
+    device->GetRenderState(D3DRS_LIGHTING, &prev_lighting);
     device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    device->SetRenderState(D3DRS_LIGHTING, FALSE);
     jeep_.Draw(device);
+    device->SetRenderState(D3DRS_LIGHTING, prev_lighting);
     device->SetRenderState(D3DRS_CULLMODE, prev_cull);
-    if (debug_draw_jeep_proxy_ && jeep_debug_proxy_.IsLoaded()) {
-        D3DXMATRIX proxy_scale;
-        D3DXMATRIX proxy_world;
-        D3DXMatrixScaling(&proxy_scale, 1.05f, 1.05f, 1.05f);
-        D3DXMatrixMultiply(&proxy_world, &proxy_scale, &wj);
-        device->SetTransform(D3DTS_WORLD, &proxy_world);
-        jeep_debug_proxy_.Draw(device);
-    }
 
     device->SetTransform(D3DTS_WORLD, &id);
     DrawHud(device, client_w, client_h);
