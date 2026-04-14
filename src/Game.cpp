@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <cstdint>
 
 #include "Camera.h"
 #include "Collision.h"
@@ -246,7 +247,7 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     vs.y = terrain_.SampleHeight(vs.x, vs.z) + 1.1f;
     vehicle_.Reset(vs, 0.4f);
     boulder_vel_ = D3DXVECTOR3(0.f, 0.f, 0.f);
-    sim_time_ = 0.f;
+    sim_time_ = 0.0;
     fps_smoothed_ = 0.f;
     wants_quit_ = false;
     return true;
@@ -296,13 +297,14 @@ void Game::Update(float dt, Graphics& graphics) {
         PostQuitMessage(0);
     }
 
-    sim_time_ += dt;
+    sim_time_ += static_cast<double>(dt);
     if (dt > 1e-6f) {
         const float instant_fps = 1.f / dt;
         fps_smoothed_ =
             (fps_smoothed_ <= 0.f) ? instant_fps : (fps_smoothed_ * 0.9f + instant_fps * 0.1f);
     }
-    const float day_t = std::fmod(sim_time_ * 0.12f, 6.2831853f);
+    const float sim_time_f = static_cast<float>(sim_time_);
+    const float day_t = std::fmod(sim_time_f * 0.12f, 6.2831853f);
     const float sun_h = std::sinf(day_t);
     const float sun_x = std::cosf(day_t * 0.7f);
     const float sun_z = std::sinf(day_t * 0.7f);
@@ -435,7 +437,12 @@ void Game::DrawHud(IDirect3DDevice9* device, int client_w, int client_h) {
             windmill_state = L"static";
         }
     }
-    swprintf_s(line, L"sim t=%.1fs | windmill=%s", sim_time_, windmill_state);
+    const int64_t total_tenths = static_cast<int64_t>(sim_time_ * 10.0 + 0.5);
+    const int sim_minutes = static_cast<int>(total_tenths / 600);
+    const int sim_seconds = static_cast<int>((total_tenths / 10) % 60);
+    const int sim_tenths = static_cast<int>(total_tenths % 10);
+    swprintf_s(line, L"sim t=%02d:%02d.%01d | windmill=%s", sim_minutes, sim_seconds, sim_tenths,
+               windmill_state);
     RECT r2{8, 32, client_w - 8, (std::min)(56, bottom_pad)};
     font_->DrawTextW(nullptr, line, -1, &r2, DT_LEFT | DT_TOP, D3DCOLOR_ARGB(255, 220, 240, 255));
 
@@ -492,7 +499,7 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
 
     if (windmill_loaded_) {
         if (windmill_is_static_mesh_) {
-            const float angle = windmill_anim_paused_ ? 0.f : sim_time_ * 0.65f;
+            const float angle = windmill_anim_paused_ ? 0.f : static_cast<float>(sim_time_) * 0.65f;
             D3DXMATRIX rot;
             D3DXMATRIX tr;
             D3DXMATRIX wm;
