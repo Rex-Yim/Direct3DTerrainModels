@@ -6,7 +6,8 @@ cmake-build-*/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
-Makefile
+# Root-level Makefile from some generators; do not ignore docs/Makefile (LaTeX build).
+/Makefile
 *.ninja
 .ninja_deps
 .ninja_log

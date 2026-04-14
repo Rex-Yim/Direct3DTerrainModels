@@ -17,7 +17,7 @@ Course project: an interactive **DirectX 9.0c** sandbox on procedural mountainou
 - **Source:** `src/` — entry `main.cpp`, `Game.cpp`, terrain, vehicle, graphics, animation, input.
 - **Build:** `CMakeLists.txt` — target `maeg4060_stage2` (Windows, MSVC, C++17, DirectX 9 / D3DX, optional XInput).
 - **Assets:** `Assets/` — models, textures, terrain references.
-- **Docs:** **`final_stage_report.pdf`** (Final Stage submission), **`User_Guide.pdf`**, **`stage1_proposal.pdf`**, and **`stage2_development_report.pdf`** live in **`docs/`**. Replace **`final_stage_report.pdf`** with your own export if needed. LaTeX sources are in **`docs/latex/`**. Rebuild with `make` or `docs/build-docs.bat` (see **`docs/README.md`**).
+- **Docs:** **`stageOne.pdf`**, **`stageTwo.pdf`**, and **`stageFinal.pdf`** (course stages), plus **`User_Guide.pdf`**, live in **`docs/`**. Replace **`stageFinal.pdf`** with your own export if needed. LaTeX sources are in **`docs/latex/`**. Rebuild with `make` or `docs/build-docs.bat` (see **`docs/README.md`**).
 
 See **`docs/User_Guide.pdf`** (source: `docs/latex/user_guide.tex`) for controls, requirements, and how to run the executable.
 

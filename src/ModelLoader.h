@@ -32,6 +32,8 @@ public:
     HRESULT LoadFromFile(IDirect3DDevice9* device, const wchar_t* path);
 
     void Draw(IDirect3DDevice9* device) const;
+    /** Draw a single material subset (for split world transforms, e.g. rotating sails only). */
+    void DrawSubset(IDirect3DDevice9* device, DWORD subset_index) const;
 
     void Unload() { Release(); }
 

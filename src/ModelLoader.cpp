@@ -896,3 +896,31 @@ void ModelLoader::Draw(IDirect3DDevice9* device) const {
     }
     device->SetTexture(0, nullptr);
 }
+
+void ModelLoader::DrawSubset(IDirect3DDevice9* device, DWORD subset_index) const {
+    if (!device || !mesh_) {
+        return;
+    }
+
+    device->SetFVF(mesh_->GetFVF());
+
+    if (materials_.empty()) {
+        if (subset_index != 0) {
+            return;
+        }
+        D3DMATERIAL9 material = MakeDefaultMaterial();
+        device->SetMaterial(&material);
+        device->SetTexture(0, nullptr);
+        mesh_->DrawSubset(0);
+        return;
+    }
+
+    if (subset_index >= static_cast<DWORD>(materials_.size())) {
+        return;
+    }
+
+    device->SetMaterial(&materials_[subset_index]);
+    device->SetTexture(0, textures_[subset_index]);
+    mesh_->DrawSubset(subset_index);
+    device->SetTexture(0, nullptr);
+}

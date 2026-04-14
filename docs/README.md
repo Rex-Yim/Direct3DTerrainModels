@@ -6,12 +6,12 @@ Course PDFs live **in this directory** (not under `latex/`):
 
 | File | Source (if you build from LaTeX) |
 |------|-----------------------------------|
-| `final_stage_report.pdf` | `latex/final_stage_report.tex` |
+| `stageFinal.pdf` | `latex/stageFinal.tex` |
 | `User_Guide.pdf` | `latex/user_guide.tex` |
-| `stage1_proposal.pdf` | Course Stage 1 proposal (submitted PDF; archived in repo) |
-| `stage2_development_report.pdf` | Course Stage 2 development report (`2nd_Report_docs.pdf`; archived in repo) |
+| `stageOne.pdf` | Course Stage 1 proposal (archived submitted PDF) |
+| `stageTwo.pdf` | Course Stage 2 development report (archived submitted PDF) |
 
-You can **replace `final_stage_report.pdf`** with your own exported PDF; the Makefile only overwrites it when you run `make` / `build-docs.bat`.
+You can **replace `stageFinal.pdf`** with your own exported PDF; the Makefile only overwrites it when you run `make` / `build-docs.bat`.
 
 LaTeX sources and screenshots are under `latex/` and `images/`.
 

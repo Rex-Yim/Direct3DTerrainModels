@@ -706,17 +706,38 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
 
     if (windmill_loaded_) {
         if (windmill_is_static_mesh_) {
+            // OBJ materials: 0=C4DMAT_Muehle (tower), 1=C4DMAT_sockel (base),
+            // 2=C4DMAT_GelaenderWindrad (blade wheel). Rotate only the wheel around a horizontal axis;
+            // a Y spin moved the whole mesh like a carousel and did not read as blade motion.
             const float angle = windmill_anim_paused_ ? 0.f : static_cast<float>(sim_time_) * 0.65f;
-            D3DXMATRIX rot;
+            D3DXMATRIX rot_blades;
             D3DXMATRIX tr;
-            D3DXMATRIX tmp;
-            D3DXMATRIX wm;
-            D3DXMatrixRotationY(&rot, angle);
+            D3DXMATRIX corr_tr;
+            D3DXMATRIX wm_base;
+            D3DXMATRIX wm_blades;
+            D3DXMatrixRotationX(&rot_blades, angle);
             D3DXMatrixTranslation(&tr, windmill_pos_.x, windmill_pos_.y, windmill_pos_.z);
-            D3DXMatrixMultiply(&tmp, &windmill_local_correction_, &rot);
-            D3DXMatrixMultiply(&wm, &tmp, &tr);
-            device->SetTransform(D3DTS_WORLD, &wm);
-            windmill_static_.Draw(device);
+            D3DXMatrixMultiply(&corr_tr, &windmill_local_correction_, &tr);
+            D3DXMATRIX tmp_blades;
+            D3DXMatrixMultiply(&tmp_blades, &windmill_local_correction_, &rot_blades);
+            D3DXMatrixMultiply(&wm_blades, &tmp_blades, &tr);
+            wm_base = corr_tr;
+
+            const DWORD n_sub = windmill_static_.NumMaterials();
+            constexpr DWORD kBladeSubset = 2u;
+            if (n_sub > kBladeSubset) {
+                for (DWORD s = 0; s < n_sub; ++s) {
+                    if (s == kBladeSubset) {
+                        device->SetTransform(D3DTS_WORLD, &wm_blades);
+                    } else {
+                        device->SetTransform(D3DTS_WORLD, &wm_base);
+                    }
+                    windmill_static_.DrawSubset(device, s);
+                }
+            } else {
+                device->SetTransform(D3DTS_WORLD, &wm_blades);
+                windmill_static_.Draw(device);
+            }
         } else {
             D3DXMATRIX wm;
             D3DXMatrixTranslation(&wm, windmill_pos_.x, windmill_pos_.y, windmill_pos_.z);
