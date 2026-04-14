@@ -99,6 +99,23 @@ std::string TrimLeftCopy(const std::string& s) {
     return first == std::string::npos ? std::string() : s.substr(first);
 }
 
+/** OBJ map_Kd may include options; keep the last token as the texture filename. */
+std::string StripMapKdFilename(std::string s) {
+    s = TrimCopy(s);
+    while (!s.empty() && (s.front() == '"' || s.front() == '\'')) {
+        s.erase(0, 1);
+    }
+    while (!s.empty() && (s.back() == '"' || s.back() == '\'')) {
+        s.pop_back();
+    }
+    s = TrimCopy(s);
+    const size_t pos = s.find_last_of(" \t");
+    if (pos != std::string::npos && pos + 1 < s.size()) {
+        return TrimCopy(s.substr(pos + 1));
+    }
+    return s;
+}
+
 std::string ToLowerCopy(std::string s) {
     std::transform(s.begin(), s.end(), s.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -234,6 +251,9 @@ void FinalizeMaterialsForTexturing(std::vector<D3DMATERIAL9>* materials,
         if (tex) {
             m.Diffuse.r = m.Diffuse.g = m.Diffuse.b = m.Diffuse.a = 1.f;
             m.Ambient = m.Diffuse;
+            // Keeps textured meshes visible if exporter normals disagree with the FFP light model.
+            m.Emissive.r = m.Emissive.g = m.Emissive.b = 0.22f;
+            m.Emissive.a = 1.f;
             continue;
         }
         const float lum = m.Diffuse.r + m.Diffuse.g + m.Diffuse.b;
@@ -420,7 +440,7 @@ void LoadMaterialsFromMtl(const std::filesystem::path& mtl_path,
         } else if (keyword == "Ns") {
             current->material.Power = std::stof(rest);
         } else if (keyword == "map_Kd") {
-            current->texture_filename = rest;
+            current->texture_filename = StripMapKdFilename(rest);
         }
     }
 
@@ -586,7 +606,6 @@ HRESULT ModelLoader::LoadMeshFromObj(IDirect3DDevice9* device, const wchar_t* ob
     std::unordered_map<std::string, DWORD> material_lookup;
     DWORD current_material = EnsureDefaultMaterial(&obj_materials, &material_lookup);
 
-    bool missing_normals = false;
     std::string line;
     while (std::getline(input, line)) {
         const std::string trimmed = TrimCopy(line);
@@ -636,9 +655,6 @@ HRESULT ModelLoader::LoadMeshFromObj(IDirect3DDevice9* device, const wchar_t* ob
                 if (!ParseObjVertexRef(token, positions.size(), texcoords.size(), normals.size(),
                                        &key)) {
                     return E_FAIL;
-                }
-                if (key.normal < 0) {
-                    missing_normals = true;
                 }
                 face_vertices.push_back(key);
             }
@@ -757,12 +773,10 @@ HRESULT ModelLoader::LoadMeshFromObj(IDirect3DDevice9* device, const wchar_t* ob
     std::memcpy(attribute_data, attributes.data(), sizeof(DWORD) * attributes.size());
     mesh->UnlockAttributeBuffer();
 
-    if (missing_normals) {
-        hr = D3DXComputeNormals(mesh, nullptr);
-        if (FAILED(hr)) {
-            mesh->Release();
-            return hr;
-        }
+    hr = D3DXComputeNormals(mesh, nullptr);
+    if (FAILED(hr)) {
+        mesh->Release();
+        return hr;
     }
 
     if (obj_materials.empty()) {

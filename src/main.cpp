@@ -76,7 +76,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, PWSTR /*cmd
     HWND hwnd = CreateWindowExW(
         0,
         kWindowClassName,
-        L"MAEG4060 — Off-road terrain sandbox (DirectX 9)",
+        L"MAEG4060 - Off-road terrain sandbox (DirectX 9)",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,

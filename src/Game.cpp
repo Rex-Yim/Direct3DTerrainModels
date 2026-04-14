@@ -97,6 +97,36 @@ bool ComputeMeshBounds(ID3DXMesh* mesh, D3DXVECTOR3* out_min, D3DXVECTOR3* out_m
     return SUCCEEDED(hr);
 }
 
+/** OBJ exports often use huge/off-origin coordinates; center+scale so props match scene units. */
+void BuildReplacementMeshCorrection(ID3DXMesh* mesh, float target_max_extent, float bottom_y_offset,
+                                    D3DXMATRIX* out) {
+    D3DXMatrixIdentity(out);
+    if (!mesh) {
+        return;
+    }
+    D3DXVECTOR3 mn;
+    D3DXVECTOR3 mx;
+    if (!ComputeMeshBounds(mesh, &mn, &mx)) {
+        return;
+    }
+    const D3DXVECTOR3 center = (mn + mx) * 0.5f;
+    const D3DXVECTOR3 extents = mx - mn;
+    const float max_extent = (std::max)((std::max)(extents.x, extents.y), extents.z);
+    const float center_len_sq =
+        center.x * center.x + center.y * center.y + center.z * center.z;
+
+    if (max_extent <= 50.0f && center_len_sq <= (100.0f * 100.0f)) {
+        return;
+    }
+    const float scale =
+        (max_extent > 1e-3f) ? std::clamp(target_max_extent / max_extent, 0.001f, 5.0f) : 1.0f;
+    D3DXMATRIX sc;
+    D3DXMATRIX tr;
+    D3DXMatrixScaling(&sc, scale, scale, scale);
+    D3DXMatrixTranslation(&tr, -center.x, -mn.y + (bottom_y_offset / scale), -center.z);
+    D3DXMatrixMultiply(out, &tr, &sc);
+}
+
 struct HudVertex {
     float x, y, z, rhw;
     DWORD color;
@@ -194,6 +224,8 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     hwnd_ = hwnd;
     init_error_.clear();
     D3DXMatrixIdentity(&jeep_local_correction_);
+    D3DXMatrixIdentity(&boulder_local_correction_);
+    D3DXMatrixIdentity(&windmill_local_correction_);
     if (!device) {
         init_error_ = L"Direct3D device was not created.";
         return false;
@@ -223,30 +255,7 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
             return false;
         }
     }
-    if (ID3DXMesh* jeep_mesh = jeep_.Mesh()) {
-        D3DXVECTOR3 mn;
-        D3DXVECTOR3 mx;
-        if (ComputeMeshBounds(jeep_mesh, &mn, &mx)) {
-            const D3DXVECTOR3 center = (mn + mx) * 0.5f;
-            const D3DXVECTOR3 extents = mx - mn;
-            const float max_extent = (std::max)((std::max)(extents.x, extents.y), extents.z);
-            const float center_len_sq =
-                center.x * center.x + center.y * center.y + center.z * center.z;
-
-            // Imported replacements can be authored far from origin and at very large scales.
-            // Normalize only when bounds are clearly out-of-scene so native assets stay unchanged.
-            if (max_extent > 50.0f || center_len_sq > (100.0f * 100.0f)) {
-                const float target_size = 5.4f;
-                const float scale =
-                    (max_extent > 1e-3f) ? std::clamp(target_size / max_extent, 0.001f, 5.0f) : 1.0f;
-                D3DXMATRIX sc;
-                D3DXMATRIX tr;
-                D3DXMatrixScaling(&sc, scale, scale, scale);
-                D3DXMatrixTranslation(&tr, -center.x, -mn.y + (0.35f / scale), -center.z);
-                D3DXMatrixMultiply(&jeep_local_correction_, &tr, &sc);
-            }
-        }
-    }
+    BuildReplacementMeshCorrection(jeep_.Mesh(), 5.4f, 0.35f, &jeep_local_correction_);
 
     // Legacy .x props can include broken helper/shadow geometry; prefer OBJ replacements only.
     const auto crate_candidates =
@@ -290,6 +299,8 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
         }
     }
 
+    BuildReplacementMeshCorrection(boulder_mesh_.Mesh(), 4.4f, 0.f, &boulder_local_correction_);
+
     windmill_is_static_mesh_ = false;
     windmill_loaded_ = false;
     windmill_has_animation_ = false;
@@ -315,6 +326,9 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
             windmill_is_static_mesh_ = true;
             windmill_has_animation_ = false;
         }
+    }
+    if (windmill_is_static_mesh_) {
+        BuildReplacementMeshCorrection(windmill_static_.Mesh(), 22.f, 0.f, &windmill_local_correction_);
     }
 
     if (FAILED(D3DXCreateFontW(device, 20, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET,
@@ -695,10 +709,12 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
             const float angle = windmill_anim_paused_ ? 0.f : static_cast<float>(sim_time_) * 0.65f;
             D3DXMATRIX rot;
             D3DXMATRIX tr;
+            D3DXMATRIX tmp;
             D3DXMATRIX wm;
             D3DXMatrixRotationY(&rot, angle);
             D3DXMatrixTranslation(&tr, windmill_pos_.x, windmill_pos_.y, windmill_pos_.z);
-            D3DXMatrixMultiply(&wm, &rot, &tr);
+            D3DXMatrixMultiply(&tmp, &windmill_local_correction_, &rot);
+            D3DXMatrixMultiply(&wm, &tmp, &tr);
             device->SetTransform(D3DTS_WORLD, &wm);
             windmill_static_.Draw(device);
         } else {
@@ -719,7 +735,9 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
     D3DXMatrixScaling(&sc, s, s, s);
     D3DXMATRIX tr;
     D3DXMatrixTranslation(&tr, boulder_pos_.x, boulder_pos_.y, boulder_pos_.z);
-    D3DXMatrixMultiply(&wb, &sc, &tr);
+    D3DXMATRIX boulder_world;
+    D3DXMatrixMultiply(&boulder_world, &boulder_local_correction_, &sc);
+    D3DXMatrixMultiply(&wb, &boulder_world, &tr);
     device->SetTransform(D3DTS_WORLD, &wb);
     boulder_mesh_.Draw(device);
 

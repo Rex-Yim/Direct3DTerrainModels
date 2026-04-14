@@ -51,9 +51,11 @@ private:
     D3DXMATRIX jeep_local_correction_{};
     ModelLoader crate_;
     ModelLoader boulder_mesh_;
+    D3DXMATRIX boulder_local_correction_{};
     HierarchyModel windmill_;
     /** Used when D3DXLoadMeshHierarchyFromX fails but the same asset loads as a plain mesh. */
     ModelLoader windmill_static_;
+    D3DXMATRIX windmill_local_correction_{};
     bool windmill_loaded_ = false;
     bool windmill_is_static_mesh_ = false;
     bool windmill_has_animation_ = false;
