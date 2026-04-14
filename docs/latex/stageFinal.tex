@@ -36,6 +36,9 @@
 \g@addto@macro\UrlBreaks{\do\/\do-\do\.\do\_}
 \makeatother
 
+% Repo file links (GitHub blob on main). #1 = raw path for URL; #2 = printed \texttt (use \_ for underscores in #2).
+\newcommand{\gh}[2]{\href{https://github.com/Rex-Yim/Direct3DTerrainModels/blob/main/#1}{\texttt{#2}}}
+
 \setstretch{1.06}
 
 \captionsetup{
@@ -130,7 +133,7 @@
 \vspace*{-1.5em}
 
 \begin{reportabstract}
-This project is a DirectX~9.0c sandbox (not a scored game) where a player drives an off-road vehicle on procedural mountainous terrain. The build supports keyboard and XInput gamepad control, third-person chase camera, terrain splatting, collision with static and dynamic props, windmill animation, and a day/night lighting cycle. This report is intentionally concise: deliverables first, then implementation and authorship evidence.
+This project is a DirectX~9.0c sandbox (not a scored game) where a player drives an off-road vehicle on procedural mountainous terrain. The build supports keyboard and XInput gamepad control, third-person chase camera, terrain splatting, collision with static and dynamic props, windmill animation, and a day/night lighting cycle. This report is intentionally concise: deliverables first, then implementation and authorship evidence. Wording, figure captions, and in-text file paths are written as a single technical record---none are ornamental.
 \end{reportabstract}
 
 \tableofcontents
@@ -141,12 +144,12 @@ This project is a DirectX~9.0c sandbox (not a scored game) where a player drives
 
 \subsection{What is delivered}
 \begin{itemize}
-  \item Executable package: \texttt{Game\_Build/maeg4060\_stage2.exe} with \texttt{Game\_Build/Assets/}.
-  \item Source code: \texttt{src/} and \texttt{CMakeLists.txt}.
-  \item Documentation: Stage PDFs (\texttt{stageOne.pdf}, \texttt{stageTwo.pdf}, \texttt{stageFinal.pdf}) plus the \textbf{standalone user guide} \texttt{docs/User\_Guide.pdf} (controls, requirements, and troubleshooting; summarized in \S\ref{sec:run}).
+  \item Executable package: \texttt{Game\_Build/maeg4060\_stage2.exe} with \texttt{Game\_Build/Assets/} (\emph{generated locally; not tracked in git}).
+  \item Source code: \gh{src/}{src/} and \gh{CMakeLists.txt}{CMakeLists.txt}.
+  \item Documentation: Stage PDFs (\gh{docs/stageOne.pdf}{docs/stageOne.pdf}, \gh{docs/stageTwo.pdf}{docs/stageTwo.pdf}, \gh{docs/stageFinal.pdf}{docs/stageFinal.pdf}) plus the \textbf{standalone user guide} \gh{docs/User\_Guide.pdf}{docs/User\_Guide.pdf} (controls, requirements, and troubleshooting; summarized in \S\ref{sec:run}).
   \item Public repository (for markers, version control, and CI):\newline
         {\small\url{https://github.com/Rex-Yim/Direct3DTerrainModels}}.
-  \item Media: figures in this PDF; short viewport recordings under \texttt{docs/media/}; README GIFs under \texttt{docs/images/}.
+  \item Media: figures in this PDF; short viewport recordings under \gh{docs/media/}{docs/media/}; README GIFs under \gh{docs/images/}{docs/images/}.
 \end{itemize}
 
 \subsection{Course expectations mapping}
@@ -160,13 +163,13 @@ Table~\ref{tab:marking} maps typical final-stage submission themes from the cour
     \toprule
     \textbf{Theme} & \textbf{Where it is covered} \\
     \midrule
-    Input (keyboard / XInput) & \S\ref{sec:run}; implementation in \texttt{src/Input.cpp} \\
-    Terrain height \& vehicle following & \S\ref{sec:terrain}; \texttt{src/Terrain.cpp}, \texttt{src/Vehicle.cpp} \\
-    Collision \;\&\; physics-based motion & \S\ref{sec:physics}; \texttt{src/Collision.cpp}, \texttt{Vehicle.cpp}, boulder logic in \texttt{Game.cpp} \\
-    Animation / hierarchy models & \S\ref{sec:animation}; \texttt{src/AnimatedModel.cpp}, windmill update/draw in \texttt{Game.cpp} \\
-    Authorship \;\&\; media evidence & \S\ref{sec:assets}; assets under \texttt{Assets/models/} \\
-    Build, D3DX, packaging & \S\ref{sec:build}; \texttt{CMakeLists.txt}, Appendix-style notes in \S\ref{sec:build} \\
-    User guide (separate PDF) & \texttt{docs/User\_Guide.pdf} (full detail); \S\ref{sec:run} for a short extract \\
+    Input (keyboard / XInput) & \S\ref{sec:run}; implementation in \gh{src/Input.cpp}{src/Input.cpp} \\
+    Terrain height \& vehicle following & \S\ref{sec:terrain}; \gh{src/Terrain.cpp}{src/Terrain.cpp}, \gh{src/Vehicle.cpp}{src/Vehicle.cpp} \\
+    Collision \;\&\; physics-based motion & \S\ref{sec:physics}; \gh{src/Collision.cpp}{src/Collision.cpp}, \gh{src/Vehicle.cpp}{src/Vehicle.cpp}, boulder logic in \gh{src/Game.cpp}{src/Game.cpp} \\
+    Animation / hierarchy models & \S\ref{sec:animation}; \gh{src/AnimatedModel.cpp}{src/AnimatedModel.cpp}, windmill update/draw in \gh{src/Game.cpp}{src/Game.cpp} \\
+    Authorship \;\&\; media evidence & \S\ref{sec:assets}; assets under \gh{Assets/models/}{Assets/models/} \\
+    Build, D3DX, packaging & \S\ref{sec:build}; \gh{CMakeLists.txt}{CMakeLists.txt}, Appendix-style notes in \S\ref{sec:build} \\
+    User guide (separate PDF) & \gh{docs/User\_Guide.pdf}{docs/User\_Guide.pdf} (full detail); \S\ref{sec:run} for a short extract \\
     \bottomrule
   \end{tabular}
   \caption{Index for marking: themes vs.\ sections and code.}
@@ -205,7 +208,7 @@ Table~\ref{tab:marking} maps typical final-stage submission themes from the cour
 Windows 10 or later (64-bit recommended), DirectX~9 compatible GPU, display at least $1280\times720$. Optional Xbox-compatible controller (XInput).
 
 \subsection{Launch}
-Run \texttt{maeg4060\_stage2.exe} from \texttt{Game\_Build} with \texttt{Assets} beside the executable. Build details are summarized in \S\ref{sec:build}. The \textbf{standalone user guide} deliverable (\texttt{docs/User\_Guide.pdf}) contains the authoritative control list, requirements, and troubleshooting; this section duplicates only the essentials.
+Run \texttt{maeg4060\_stage2.exe} from \texttt{Game\_Build} with \texttt{Assets} beside the executable. Build details are summarized in \S\ref{sec:build}. The \textbf{standalone user guide} deliverable (\gh{docs/User\_Guide.pdf}{docs/User\_Guide.pdf}) contains the authoritative control list, requirements, and troubleshooting; this section duplicates only the essentials.
 
 \subsection{Controls}
 \begin{center}
@@ -231,7 +234,7 @@ Run \texttt{maeg4060\_stage2.exe} from \texttt{Game\_Build} with \texttt{Assets}
 \begingroup\sloppy
 \begin{itemize}
   \item Missing D3DX DLL: install the legacy DirectX end-user runtime, or ship \texttt{D3DX9\_43.dll} next to the exe when the build copies it.
-  \item Missing models or textures: keep \texttt{Assets/} next to the executable (working directory must resolve relative paths).
+  \item Missing models or textures: keep \gh{Assets/}{Assets/} next to the executable (working directory must resolve relative paths).
   \item Blank screen after window resize: the sample calls font and device lost/reset around \texttt{IDirect3DDevice9::Reset}---confirm GPU drivers; see user guide if issues persist.
 \end{itemize}
 \endgroup
@@ -261,18 +264,21 @@ If the hierarchy load from \texttt{model\_windmill.x} succeeds and reports anima
 
 \medskip
 \noindent\textbf{Scene lighting.}\quad
-A day/night style effect moves the sun direction and interpolates clear and ambient colours (\texttt{Game.cpp}).
+A day/night style effect moves the sun direction and interpolates clear and ambient colours (\gh{src/Game.cpp}{src/Game.cpp}).
 
 \section{3D models, media, and authorship}\sectionrule
 \label{sec:assets}
 
 \subsection{Authorship statement}
-Vehicle, windmill, crate, and boulder meshes/materials under \texttt{Assets/models/} are original work by Guo Tsun Hei. Runtime terrain is generated procedurally. Sketchfab links in Stage~1 were references only, not shipped geometry.
+Vehicle, windmill, crate, and boulder meshes/materials under \gh{Assets/models/}{Assets/models/} are original work by Guo Tsun Hei. Runtime terrain is generated procedurally. Sketchfab links in Stage~1 were references only, not shipped geometry.
+
+\subsection{Relation to Stage~2 submission}
+For markers: the \textbf{models and animation} for these assets (authored by Guo Tsun Hei) were \textbf{already finished} at the time of the \textbf{Stage~2} report submission. The Stage~2 development PDF (\gh{docs/stageTwo.pdf}{docs/stageTwo.pdf}) did not include every \emph{viewport screen capture} or \emph{inline animation GIF}\,---\,that was a matter of what we chose to show in the written report, not the state of the work. The corresponding \textbf{asset and animation files} were nevertheless \textbf{included in the Stage~2 submission package}. This final report adds the stills, GIFs, and recordings in this section and in \S\ref{sec:video-readme} as fuller documentation of the same content.
 
 \subsection{Integration notes}
 \begingroup\sloppy
 \noindent\textbf{Jeep, crate, and boulder.}\quad
-\texttt{Game::Initialize} calls \texttt{LoadStaticModelCandidates} in \texttt{src/Game.cpp}; each candidate path is tried until one loads.
+\texttt{Game::Initialize} calls \texttt{LoadStaticModelCandidates} in \gh{src/Game.cpp}{src/Game.cpp}; each candidate path is tried until one loads.
 
 \begin{itemize}\setlength\itemsep{0.25em}
   \item \textbf{Jeep:} four attempts (bundled OBJ, flat replacement OBJ, root \texttt{model\_jeep.obj}, then \texttt{model\_jeep.x}).
@@ -280,7 +286,7 @@ Vehicle, windmill, crate, and boulder meshes/materials under \texttt{Assets/mode
 \end{itemize}
 
 \noindent\textbf{Windmill.}\quad
-The animated hierarchy at \texttt{Assets/models/model\_windmill.x} is tried first. If that fails, static OBJs are tried in the same folder pattern as other props, with \texttt{model\_windmill.x} last (no animation).
+The animated hierarchy at \gh{Assets/models/model_windmill.x}{Assets/models/model\_windmill.x} is tried first. If that fails, static OBJs are tried in the same folder pattern as other props, with \texttt{model\_windmill.x} last (no animation).
 
 \medskip
 \noindent\textbf{Scene setup.}\quad
@@ -290,7 +296,7 @@ After load, meshes are placed in world space; \texttt{BuildReplacementMeshCorrec
 \subsection{Static figure evidence}
 
 \subsubsection{Authoring-tool viewports}
-These stills support texture work and scale; playable terrain remains procedural (see \texttt{Terrain.cpp}).
+These stills support texture work and scale; playable terrain remains procedural (see \gh{src/Terrain.cpp}{src/Terrain.cpp}).
 
 \begin{figure}[htbp]
   \centering
@@ -337,9 +343,9 @@ Representative frames from screen recordings under \texttt{docs/media/}; GIF var
 
 \subsection{Video and README media}
 \label{sec:video-readme}
-\noindent Recordings (paths in repo):\quad \texttt{docs/media/c4d-car-viewport.mp4} and\\
-\texttt{docs/media/c4d-windmill-viewport.mp4}.\\
-GIFs for the GitHub README live under \texttt{docs/images/}.
+\noindent Recordings (paths in repo):\quad \gh{docs/media/c4d-car-viewport.mp4}{docs/media/c4d-car-viewport.mp4} and\\
+\gh{docs/media/c4d-windmill-viewport.mp4}{docs/media/c4d-windmill-viewport.mp4}.\\
+GIFs for the GitHub README live under \gh{docs/images/}{docs/images/}.
 
 \subsubsection{Mobile browser views (public repository)}
 \begingroup\sloppy
@@ -358,7 +364,7 @@ GIFs for the GitHub README live under \texttt{docs/images/}.
   \begin{minipage}[t]{0.46\linewidth}\centering\sloppy
     \fcolorbox{AbstractFrame}{white}{%
       \includegraphics[width=0.98\linewidth]{mobile_github_actions_windows_build.png}}\\[0.35em]
-    {\footnotesize(\textit{b})~\texttt{Actions}: \texttt{windows-build.yml} run history.}
+    {\footnotesize(\textit{b})~\texttt{Actions}: \gh{.github/workflows/windows-build.yml}{.github/workflows/windows-build.yml} run history.}
   \end{minipage}
   \caption{GitHub project page on a mobile browser: public landing view and Windows CI runs.}
   \label{fig:mobile-github}
@@ -409,7 +415,7 @@ Windows CMake, C++17, MSVC recommended. Target \texttt{maeg4060\_stage2}. Links 
 \subsection{D3DX path}
 \begingroup\sloppy\small
 \noindent\textbf{(1)}~Set \texttt{DXSDK\_DIR} to the June 2010 DirectX SDK.\quad
-\textbf{(2)}~Or configure without it and let CMake obtain the NuGet D3DX package (see \texttt{CMakeLists.txt}).\par
+\textbf{(2)}~Or configure without it and let CMake obtain the NuGet D3DX package (see \gh{CMakeLists.txt}{CMakeLists.txt}).\par
 \noindent Post-build or install steps may copy \texttt{D3DX9\_43.dll} beside the executable when available.
 \endgroup
 
@@ -418,7 +424,7 @@ Submit the full \texttt{Game\_Build} folder (executable, \texttt{Assets/}, requi
 
 \section{Conclusion}\sectionrule
 \label{sec:conclusion}
-The deliverable is a compact DirectX~9 sandbox: terrain navigation, input, collision, animation integration, and team-authored 3D content. Submission materials include this report, the standalone user guide PDF, staged course PDFs, source, \texttt{Assets/}, and build instructions; the public GitHub repository hosts the CI-backed tree used for integration screenshots.
+The deliverable is a compact DirectX~9 sandbox: terrain navigation, input, collision, animation integration, and team-authored 3D content. Submission materials include this report, the standalone user guide PDF, staged course PDFs, source, \gh{Assets/}{Assets/}, and build instructions; the public GitHub repository hosts the CI-backed tree used for integration screenshots.
 
 \medskip
 \noindent\textbf{Known limitations.}\quad
@@ -434,11 +440,11 @@ Import a large heightmap PNG, extend rigging for wheel bones, add richer rigid-b
   \item MAEG4060 Virtual Reality Systems and Applications --- course project description (2025--26, Semester~2), CUHK Faculty of Engineering.
   \item Microsoft Learn / MSDN: Direct3D~9, D3DX~9 utilities, XInput.\newline
         \url{https://learn.microsoft.com/en-us/windows/win32/direct3d9}
-  \item D3DX via NuGet package \texttt{Microsoft.DXSDK.D3DX}; see \texttt{CMakeLists.txt}.
+  \item D3DX via NuGet package \texttt{Microsoft.DXSDK.D3DX}; see \gh{CMakeLists.txt}{CMakeLists.txt}.
   \item CMake documentation: \url{https://cmake.org/documentation/}
   \item GitHub repository and CI:\newline
         \url{https://github.com/Rex-Yim/Direct3DTerrainModels}
-  \item Local checkout: \texttt{src/}, \texttt{CMakeLists.txt}, \texttt{docs/User\_Guide.pdf}.
+  \item Local checkout: \gh{src/}{src/}, \gh{CMakeLists.txt}{CMakeLists.txt}, \gh{docs/User\_Guide.pdf}{docs/User\_Guide.pdf}.
 \end{itemize}
 \endgroup
 
