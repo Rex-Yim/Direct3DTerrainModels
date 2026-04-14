@@ -48,6 +48,7 @@ private:
     Terrain terrain_;
     Vehicle vehicle_;
     ModelLoader jeep_;
+    D3DXMATRIX jeep_local_correction_{};
     ModelLoader crate_;
     ModelLoader boulder_mesh_;
     HierarchyModel windmill_;

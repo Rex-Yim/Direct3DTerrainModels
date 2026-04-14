@@ -74,6 +74,29 @@ struct StaticModelLoadResult {
     std::wstring attempts_log;
 };
 
+bool ComputeMeshBounds(ID3DXMesh* mesh, D3DXVECTOR3* out_min, D3DXVECTOR3* out_max) {
+    if (!mesh || !out_min || !out_max) {
+        return false;
+    }
+    const DWORD fvf = mesh->GetFVF();
+    if ((fvf & D3DFVF_XYZ) == 0) {
+        return false;
+    }
+    const DWORD stride = D3DXGetFVFVertexSize(fvf);
+    if (stride < sizeof(D3DXVECTOR3)) {
+        return false;
+    }
+
+    void* vb_data = nullptr;
+    if (FAILED(mesh->LockVertexBuffer(D3DLOCK_READONLY, &vb_data)) || !vb_data) {
+        return false;
+    }
+    const HRESULT hr = D3DXComputeBoundingBox(static_cast<const D3DXVECTOR3*>(vb_data),
+                                              mesh->GetNumVertices(), stride, out_min, out_max);
+    mesh->UnlockVertexBuffer();
+    return SUCCEEDED(hr);
+}
+
 struct HudVertex {
     float x, y, z, rhw;
     DWORD color;
@@ -170,6 +193,7 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     Shutdown();
     hwnd_ = hwnd;
     init_error_.clear();
+    D3DXMatrixIdentity(&jeep_local_correction_);
     if (!device) {
         init_error_ = L"Direct3D device was not created.";
         return false;
@@ -197,6 +221,30 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
             init_error_ += L"\nAttempts:\n";
             init_error_ += jeep_load.attempts_log;
             return false;
+        }
+    }
+    if (ID3DXMesh* jeep_mesh = jeep_.Mesh()) {
+        D3DXVECTOR3 mn;
+        D3DXVECTOR3 mx;
+        if (ComputeMeshBounds(jeep_mesh, &mn, &mx)) {
+            const D3DXVECTOR3 center = (mn + mx) * 0.5f;
+            const D3DXVECTOR3 extents = mx - mn;
+            const float max_extent = (std::max)((std::max)(extents.x, extents.y), extents.z);
+            const float center_len_sq =
+                center.x * center.x + center.y * center.y + center.z * center.z;
+
+            // Imported replacements can be authored far from origin and at very large scales.
+            // Normalize only when bounds are clearly out-of-scene so native assets stay unchanged.
+            if (max_extent > 50.0f || center_len_sq > (100.0f * 100.0f)) {
+                const float target_size = 4.8f;
+                const float scale =
+                    (max_extent > 1e-3f) ? std::clamp(target_size / max_extent, 0.001f, 5.0f) : 1.0f;
+                D3DXMATRIX sc;
+                D3DXMATRIX tr;
+                D3DXMatrixScaling(&sc, scale, scale, scale);
+                D3DXMatrixTranslation(&tr, -center.x, -mn.y, -center.z);
+                D3DXMatrixMultiply(&jeep_local_correction_, &tr, &sc);
+            }
         }
     }
 
@@ -676,7 +724,9 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
 
     D3DXMATRIX wj;
     vehicle_.BuildWorldMatrix(terrain_, &wj);
-    device->SetTransform(D3DTS_WORLD, &wj);
+    D3DXMATRIX wj_final;
+    D3DXMatrixMultiply(&wj_final, &jeep_local_correction_, &wj);
+    device->SetTransform(D3DTS_WORLD, &wj_final);
     jeep_.Draw(device);
 
     device->SetTransform(D3DTS_WORLD, &id);
