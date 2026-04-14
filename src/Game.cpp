@@ -13,9 +13,6 @@
 
 namespace {
 
-constexpr wchar_t kJeepPath[] = L"Assets/models/model_jeep.x";
-constexpr wchar_t kCratePath[] = L"Assets/models/model_crate.x";
-constexpr wchar_t kBoulderPath[] = L"Assets/models/model_boulder.x";
 constexpr wchar_t kWindmillPath[] = L"Assets/models/model_windmill.x";
 constexpr wchar_t kJeepObjPathA[] = L"Assets/models/replacements/model_jeep/model_jeep.obj";
 constexpr wchar_t kJeepObjPathB[] = L"Assets/models/replacements/model_jeep.obj";
@@ -182,8 +179,9 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
         return false;
     }
 
+    // Legacy .x props can include broken helper/shadow geometry; prefer OBJ replacements only.
     const auto jeep_candidates =
-        std::array<const wchar_t*, 4>{kJeepObjPathA, kJeepObjPathB, kJeepObjPathC, kJeepPath};
+        std::array<const wchar_t*, 3>{kJeepObjPathA, kJeepObjPathB, kJeepObjPathC};
     const StaticModelLoadResult jeep_load = LoadStaticModelCandidates(device, &jeep_, jeep_candidates);
     if (FAILED(jeep_load.hr) || !jeep_.IsLoaded()) {
         const HRESULT fallback_hr =
@@ -201,8 +199,9 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
         }
     }
 
+    // Legacy .x props can include broken helper/shadow geometry; prefer OBJ replacements only.
     const auto crate_candidates =
-        std::array<const wchar_t*, 4>{kCrateObjPathA, kCrateObjPathB, kCrateObjPathC, kCratePath};
+        std::array<const wchar_t*, 3>{kCrateObjPathA, kCrateObjPathB, kCrateObjPathC};
     const StaticModelLoadResult crate_load = LoadStaticModelCandidates(device, &crate_, crate_candidates);
     if (FAILED(crate_load.hr) || !crate_.IsLoaded()) {
         const HRESULT fallback_hr =
@@ -220,8 +219,9 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
         }
     }
 
-    const auto boulder_candidates = std::array<const wchar_t*, 4>{kBoulderObjPathA, kBoulderObjPathB,
-                                                                   kBoulderObjPathC, kBoulderPath};
+    // Legacy .x props can include broken helper/shadow geometry; prefer OBJ replacements only.
+    const auto boulder_candidates = std::array<const wchar_t*, 3>{kBoulderObjPathA, kBoulderObjPathB,
+                                                                   kBoulderObjPathC};
     const StaticModelLoadResult boulder_load =
         LoadStaticModelCandidates(device, &boulder_mesh_, boulder_candidates);
     if (FAILED(boulder_load.hr) || !boulder_mesh_.IsLoaded()) {
