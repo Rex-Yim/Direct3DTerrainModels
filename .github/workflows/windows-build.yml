@@ -17,6 +17,10 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      WIN_CERTIFICATE_BASE64: ${{ secrets.WIN_CERTIFICATE_BASE64 }}
+      WIN_CERTIFICATE_PASSWORD: ${{ secrets.WIN_CERTIFICATE_PASSWORD }}
+      WIN_CERTIFICATE_SHA1: ${{ secrets.WIN_CERTIFICATE_SHA1 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,6 +30,45 @@ jobs:
 
       - name: Build (Release)
         run: cmake --build build --config Release --parallel
+
+      - name: Sign executable (if cert is configured)
+        if: env.WIN_CERTIFICATE_BASE64 != '' && env.WIN_CERTIFICATE_PASSWORD != ''
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $signtool) {
+            throw "signtool.exe not found on runner."
+          }
+
+          $certPath = Join-Path $env:RUNNER_TEMP "codesign.pfx"
+          [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:WIN_CERTIFICATE_BASE64))
+
+          $target = Join-Path "build\Release" "maeg4060_stage2.exe"
+          if (-not (Test-Path $target)) {
+            throw "Expected executable was not found: $target"
+          }
+
+          if ($env:WIN_CERTIFICATE_SHA1) {
+            & $signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f $certPath /p $env:WIN_CERTIFICATE_PASSWORD /sha1 $env:WIN_CERTIFICATE_SHA1 $target
+          } else {
+            & $signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f $certPath /p $env:WIN_CERTIFICATE_PASSWORD $target
+          }
+          if ($LASTEXITCODE -ne 0) {
+            throw "Code signing failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Verify signature
+        if: env.WIN_CERTIFICATE_BASE64 != '' && env.WIN_CERTIFICATE_PASSWORD != ''
+        shell: pwsh
+        run: |
+          $target = Join-Path "build\Release" "maeg4060_stage2.exe"
+          $sig = Get-AuthenticodeSignature -FilePath $target
+          if ($sig.Status -ne "Valid") {
+            throw "Signature verification failed: $($sig.Status) $($sig.StatusMessage)"
+          }
+          Write-Host "Signature verified for $target."
 
       - name: List Release output
         shell: pwsh

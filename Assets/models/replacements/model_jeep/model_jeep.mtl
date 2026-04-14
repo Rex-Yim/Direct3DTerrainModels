@@ -1,0 +1,17 @@
+# File produced by Open Asset Import Library (http://www.assimp.sf.net)
+# (assimp v6.0.0)
+
+newmtl C4DMAT_NONE
+Kd 1 1 1
+Ks 0 0 0
+Ke 0 0 0
+Ns 1
+illum 2
+
+newmtl C4DMAT___
+Kd 1 1 1
+Ks 0.453000009 0.453000009 0.453000009
+Ke 0 0 0
+Ns 1
+illum 2
+

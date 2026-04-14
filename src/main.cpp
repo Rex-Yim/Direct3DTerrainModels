@@ -20,8 +20,6 @@ constexpr wchar_t kWindowClassName[] = L"PhysicsSandboxWindow";
 
 constexpr int kInitialClientWidth = 1280;
 constexpr int kInitialClientHeight = 720;
-constexpr float kMaxFps = 60.0f;
-constexpr float kMinFrameTimeSec = 1.0f / kMaxFps;
 
 Graphics* g_graphics = nullptr;
 Game* g_game = nullptr;
@@ -150,18 +148,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE /*prev_instance*/, PWSTR /*cmd
 
             LARGE_INTEGER now{};
             QueryPerformanceCounter(&now);
-            float dt =
-                static_cast<float>(now.QuadPart - prev.QuadPart) / static_cast<float>(freq.QuadPart);
-            if (dt < kMinFrameTimeSec) {
-                const float remaining_sec = kMinFrameTimeSec - dt;
-                const DWORD sleep_ms = static_cast<DWORD>(remaining_sec * 1000.0f);
-                if (sleep_ms > 0) {
-                    Sleep(sleep_ms);
-                }
-                QueryPerformanceCounter(&now);
-                dt = static_cast<float>(now.QuadPart - prev.QuadPart) /
-                     static_cast<float>(freq.QuadPart);
-            }
+            float dt = static_cast<float>(now.QuadPart - prev.QuadPart) /
+                       static_cast<float>(freq.QuadPart);
             prev = now;
             dt = (std::min)(dt, 0.05f);
 

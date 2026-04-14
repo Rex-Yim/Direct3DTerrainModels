@@ -17,6 +17,7 @@ constexpr wchar_t kWindmillPath[] = L"Assets/models/model_windmill.x";
 constexpr wchar_t kJeepObjPathA[] = L"Assets/models/replacements/model_jeep/model_jeep.obj";
 constexpr wchar_t kJeepObjPathB[] = L"Assets/models/replacements/model_jeep.obj";
 constexpr wchar_t kJeepObjPathC[] = L"Assets/models/model_jeep.obj";
+constexpr wchar_t kJeepXPath[] = L"Assets/models/model_jeep.x";
 constexpr wchar_t kCrateObjPathA[] = L"Assets/models/replacements/model_crate/model_crate.obj";
 constexpr wchar_t kCrateObjPathB[] = L"Assets/models/replacements/model_crate.obj";
 constexpr wchar_t kCrateObjPathC[] = L"Assets/models/model_crate.obj";
@@ -180,8 +181,8 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     }
 
     // Legacy .x props can include broken helper/shadow geometry; prefer OBJ replacements only.
-    const auto jeep_candidates =
-        std::array<const wchar_t*, 3>{kJeepObjPathA, kJeepObjPathB, kJeepObjPathC};
+    const auto jeep_candidates = std::array<const wchar_t*, 4>{kJeepObjPathA, kJeepObjPathB,
+                                                                kJeepObjPathC, kJeepXPath};
     const StaticModelLoadResult jeep_load = LoadStaticModelCandidates(device, &jeep_, jeep_candidates);
     if (FAILED(jeep_load.hr) || !jeep_.IsLoaded()) {
         const HRESULT fallback_hr =
