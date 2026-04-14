@@ -11,6 +11,7 @@
 \usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{graphicx}
+\graphicspath{{figures/}}
 \usepackage{pdfpages}
 \usepackage{booktabs}
 \usepackage{amsmath}
@@ -103,12 +104,20 @@ Submit the Release binary as \texttt{Game\_Build/maeg4060\_stage2.exe} together 
 \end{itemize}
 
 \subsection{Screenshots}
-Replace the placeholder below with exported PNGs from the running build (vehicle on terrain, dusk/night, collision with crate) before final PDF export.
+Figures~\ref{fig:shot-sandbox} and~\ref{fig:shot-actions} show the running DirectX~9.0c sandbox and a GitHub Actions run page (workflow \#14: boulder and windmill models) displaying the same application.
 
 \begin{figure}[htbp]
   \centering
-  \fbox{\parbox[c][4.5cm][c]{0.88\linewidth}{\centering\small\textit{Placeholder: add \texttt{\textbackslash includegraphics} for captured frames.}}}
-  \caption{Overall scene (terrain, vehicle, windmill, props).}
+  \includegraphics[width=0.92\linewidth]{screenshot_sandbox_windmill.png}
+  \caption{In-application view: procedural terrain with grass/rock/stone splats, windmill with hierarchy animation, props with crate texture, and HUD (speed, camera position, splat summary).}
+  \label{fig:shot-sandbox}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.92\linewidth]{screenshot_github_actions_run.png}
+  \caption{GitHub Actions: workflow run documenting boulder and windmill integration; inset shows the sandbox with windmill, boulder, crate, vehicle, and terrain HUD.}
+  \label{fig:shot-actions}
 \end{figure}
 
 % ---------------------------------------------------------------------------
