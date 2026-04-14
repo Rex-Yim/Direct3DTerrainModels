@@ -1,332 +1,386 @@
-% MAEG4060 — Final Stage report (end-of-course submission)
-% Aligns with Project Description_25-26-3.pdf:
-%   (1) completed program — summarize in report; submit binary/source per course instructions
-%   (2) user guide
-%   (3) brief techniques + model sources and modifications
-% Final submission deadline (course): 17 April 2026
+% MAEG4060 — Final Stage report (styled edition)
 \documentclass[11pt,a4paper]{article}
 
-\usepackage[margin=2.5cm]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{graphicx}
-% Figures live in docs/images/ (repo root of Markdown screenshots); build via docs/Makefile
 \graphicspath{{../images/}}
-\usepackage{pdfpages}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{amsmath}
 \usepackage{url}
-\usepackage[hidelinks,breaklinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{setspace}
+\usepackage[margin=2.4cm,bindingoffset=0pt,footskip=28pt]{geometry}
+\usepackage[breaklinks,colorlinks=true,bookmarksopen=true]{hyperref}
 
-\makeatletter
-\g@addto@macro\UrlBreaks{\do\/\do-\do\.\do\=}
-\makeatother
+% --- Visual theme (muted slate / blue; print-friendly) ---
+\definecolor{Brand}{HTML}{1e3a5f}
+\definecolor{BrandLight}{HTML}{3d5a80}
+\definecolor{AbstractBg}{HTML}{f7f9fc}
+\definecolor{AbstractFrame}{HTML}{c5d0e0}
+\definecolor{RuleGray}{HTML}{94a3b8}
 
 \hypersetup{
   pdftitle={MAEG4060 Final Stage Report},
-  pdfauthor={Guo Tsun Hei; Yim Fu Chong}
+  pdfauthor={Guo Tsun Hei; Yim Fu Chong},
+  linkcolor=BrandLight,
+  urlcolor=BrandLight,
+  citecolor=BrandLight,
 }
 
+\makeatletter
+\g@addto@macro\UrlBreaks{\do\/\do-\do\.\do\_}
+\makeatother
+
+\setstretch{1.06}
+
+\captionsetup{
+  font=small,
+  labelfont=bf,
+  textfont=it,
+  margin=0.6cm,
+  skip=8pt,
+}
+
+% Section styling without titlesec (TeX Live basic may omit it)
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}%
+  {-2.8ex \@plus -1ex \@minus -.2ex}%
+  {1.4ex \@plus .2ex}%
+  {\reset@font\Large\bfseries\color{Brand}}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}%
+  {-2.2ex \@plus -1ex \@minus -.2ex}%
+  {0.85ex \@plus .2ex}%
+  {\reset@font\large\bfseries\color{BrandLight}}}
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
+  {-1.9ex \@plus -0.6ex \@minus -.15ex}%
+  {0.7ex \@plus .12ex}%
+  {\reset@font\normalsize\bfseries\color{BrandLight}}}
+\makeatother
+
+\newcommand{\sectionrule}{%
+  \par\vspace{-0.35em}\noindent{\color{RuleGray}\rule{\linewidth}{0.55pt}}\par\vspace{0.6em}}
+
+% Width for single-column authoring/C4D figures (adjust one value to resize figures 3--6 together)
+\newcommand{\AuthfigWidth}{0.56\textwidth}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\scshape MAEG4060 --- Final Stage Report}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\small\textcolor{RuleGray}{The Chinese University of Hong Kong}}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyfoot[C]{\small\textcolor{RuleGray}{The Chinese University of Hong Kong}}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+% Abstract block: stable on TeX Live basic (avoids fragile nested \fcolorbox environments).
+\newenvironment{reportabstract}{%
+  \par\vspace{0.5em}%
+  {\color{RuleGray}\hrule height 0.55pt}%
+  \par\vspace{0.45em}%
+  \begin{quotation}\small
+  \noindent\textcolor{Brand}{\textbf{Abstract.}}\quad\ignorespaces
+}{%
+  \end{quotation}%
+  \par\vspace{0.35em}%
+  {\color{RuleGray}\hrule height 0.55pt}%
+  \par\vspace{0.75em}%
+}
+
+% --- Title ---
 \title{%
-  MAEG4060 Virtual Reality Systems and Applications\\
-  \large The Chinese University of Hong Kong (CUHK)\\
-  \large Course Project -- Final Stage Report}
+  {\Large\bfseries\color{Brand}MAEG4060}\quad
+  {\large\color{BrandLight}Virtual Reality Systems and Applications}\\[0.85em]
+  {\Large Course Project --- Final Stage Report}\\[0.35em]
+  {\normalsize\color{RuleGray}The Chinese University of Hong Kong (CUHK)}}
 \author{%
-  \parbox{0.92\linewidth}{\centering
-  \textbf{Project title:} Interactive Physical Simulation of Off-Road Vehicle Dynamics in a Mountainous Terrain\\[0.75em]
-  \textbf{Group members:}\\[0.35em]
-  Guo Tsun Hei (1155186272): 3D Modeling, Texturing, Rigging, and Animation\\
-  Yim Fu Chong (1155176974): Programming, Physics Engine, and System Integration}}
-\date{Submission deadline: 17 April 2026}
+  \begin{minipage}{0.92\linewidth}\centering
+  \rule[0.5ex]{0.45\linewidth}{0.55pt}\\[0.85em]
+  \textbf{Project title:}\\[0.25em]
+  {\large Interactive Physical Simulation of Off-Road Vehicle Dynamics\\in a Mountainous Terrain}\\[1em]
+  \textbf{Group members}\\[0.45em]
+  \begin{tabular}{@{}c@{}}
+    Guo Tsun Hei (1155186272) --- 3D modeling, texturing, rigging, animation\\[0.35em]
+    Yim Fu Chong (1155176974) --- Programming, physics, system integration
+  \end{tabular}\\[0.65em]
+  \small\textcolor{RuleGray}{Submission deadline: 17 April 2026}
+  \end{minipage}}
+\date{}
+
+% --- Float helpers: framed screenshots (trim = left bottom right top in bp; clip then scale) ---
+\newcommand{\sandboxScreenshot}{%
+  \fcolorbox{AbstractFrame}{white}{%
+    \includegraphics[trim=22 30 22 42,clip,width=0.92\linewidth]{screenshot_sandbox_windmill.png}}}
+\newcommand{\ciScreenshot}{%
+  \fcolorbox{AbstractFrame}{white}{%
+    \includegraphics[trim=24 28 24 48,clip,width=0.92\linewidth]{screenshot_github_actions_run.png}}}
 
 \begin{document}
+\renewcommand{\figurename}{\textcolor{Brand}{Figure}}
 \maketitle
+\thispagestyle{empty}
+\vspace*{-1.5em}
 
-\begin{abstract}
-\noindent
-We present a DirectX~9.0c fixed-function \textbf{sandbox} (not a scored game) set on procedural mountainous terrain. The user drives a textured vehicle with keyboard or XInput gamepad; a third-person camera follows the chassis. The terrain uses bilinear height sampling, slope-based splatting (grass base plus blended rock, stone, and mountain layers), and surface normals for vehicle orientation. Static props include a crate (AABB) and a loose boulder (bounding sphere with gravity and impulses). A windmill model is loaded through the DirectX frame hierarchy with \texttt{ID3DXAnimationController} when present in the asset. A simple day/night cycle modulates the sun direction, ambient light, and clear colour; an \texttt{ID3DXFont} HUD shows speed and position. The implementation is native Visual C++17 with CMake, satisfying the course requirements for real-time 3D, input, physics-based motion, navigation on geometry, collision, and Maya-exported animation integration.
-\end{abstract}
+\begin{reportabstract}
+This project is a DirectX~9.0c sandbox (not a scored game) where a player drives an off-road vehicle on procedural mountainous terrain. The build supports keyboard and XInput gamepad control, third-person chase camera, terrain splatting, collision with static and dynamic props, windmill animation, and a day/night lighting cycle. This report is intentionally concise: deliverables first, then implementation and authorship evidence.
+\end{reportabstract}
 
 \tableofcontents
 \newpage
 
-% ---------------------------------------------------------------------------
-\section{Introduction}
-\label{sec:intro}
+\section{Project snapshot}\sectionrule
+\label{sec:snapshot}
 
-\subsection{Project scope}
-The environment is an off-road hillside: the player explores a heightfield, interacts with props, and observes a time-varying sky palette. Compared to the Stage~1 proposal, terrain height data are \textbf{generated procedurally} at startup (Sketchfab terrain remained a visual reference) to keep the repository self-contained; splatting, vehicle dynamics, and collision behaviour match the intended design.
+\subsection{What is delivered}
+\begin{itemize}
+  \item Executable package: \texttt{Game\_Build/maeg4060\_stage2.exe} with \texttt{Game\_Build/Assets/}.
+  \item Source code: \texttt{src/} and \texttt{CMakeLists.txt}.
+  \item Documentation: Stage PDFs (\texttt{stageOne.pdf}, \texttt{stageTwo.pdf}, \texttt{stageFinal.pdf}) plus the \textbf{standalone user guide} \texttt{docs/User\_Guide.pdf} (controls, requirements, and troubleshooting; summarized in \S\ref{sec:run}).
+  \item Public repository (for markers, version control, and CI):\newline
+        {\small\url{https://github.com/Rex-Yim/Direct3DTerrainModels}}.
+  \item Media: figures in this PDF; short viewport recordings under \texttt{docs/media/}; README GIFs under \texttt{docs/images/}.
+\end{itemize}
 
-\subsection{Alignment with course requirements}
-The application is implemented in \textbf{Visual C++} with \textbf{DirectX~9.0c}. It is a technical demonstration / sandbox (\textbf{not} a video game: no missions, no score). Input: \textbf{keyboard} and \textbf{gamepad}. The scene includes \textbf{physical simulation} (e.g.\ gravity, vehicle dynamics, terrain interaction, collisions).
-
-\subsection{Mapping to marking criteria (group project)}
-Table~\ref{tab:marking} maps Stage~3 marking components from the course project description to sections in this report.
+\subsection{Course expectations mapping}
+Table~\ref{tab:marking} maps typical final-stage submission themes from the course project brief to sections of this report, companion PDFs, and code entry points.
 
 \begin{table}[htbp]
   \centering
-  \caption{Marking components and where they are described.}
-  \label{tab:marking}
-  \begin{tabular}{@{}lll@{}}
+  \small
+  \setlength{\tabcolsep}{6pt}
+  \begin{tabular}{@{}p{0.34\linewidth}p{0.58\linewidth}@{}}
     \toprule
-    \textbf{Component (weight)} & \textbf{See section} & \textbf{Notes} \\
+    \textbf{Theme} & \textbf{Where it is covered} \\
     \midrule
-    Gamepad / joystick (5\%) & \S\ref{sec:user-controls} & XInput / analog mapping \\
-    Model navigation (5\%) & \S\ref{sec:techniques-terrain} & Terrain following, camera or vehicle \\
-    Collision, static objects (10\%) & \S\ref{sec:techniques-collision} & e.g.\ AABB / spheres \\
-    Physics-based motion (10\%) & \S\ref{sec:techniques-physics} & Forces, integration, friction \\
-    Maya animation in VR (20\%, group) & \S\ref{sec:techniques-animation} & \texttt{.X} / \texttt{ID3DXAnimationController} etc. \\
-    User guide (5\%) & \S\ref{sec:user-guide} & Controls, requirements, run instructions \\
-    Report (15\%) & Whole document & Clarity, completeness \\
-    Bonus (10\%) & \S\ref{sec:bonus} & Moving-object collision, extra effects, \ldots \\
+    Input (keyboard / XInput) & \S\ref{sec:run}; implementation in \texttt{src/Input.cpp} \\
+    Terrain height \& vehicle following & \S\ref{sec:terrain}; \texttt{src/Terrain.cpp}, \texttt{src/Vehicle.cpp} \\
+    Collision \;\&\; physics-based motion & \S\ref{sec:physics}; \texttt{src/Collision.cpp}, \texttt{Vehicle.cpp}, boulder logic in \texttt{Game.cpp} \\
+    Animation / hierarchy models & \S\ref{sec:animation}; \texttt{src/AnimatedModel.cpp}, windmill update/draw in \texttt{Game.cpp} \\
+    Authorship \;\&\; media evidence & \S\ref{sec:assets}; assets under \texttt{Assets/models/} \\
+    Build, D3DX, packaging & \S\ref{sec:build}; \texttt{CMakeLists.txt}, Appendix-style notes in \S\ref{sec:build} \\
+    User guide (separate PDF) & \texttt{docs/User\_Guide.pdf} (full detail); \S\ref{sec:run} for a short extract \\
     \bottomrule
   \end{tabular}
+  \caption{Index for marking: themes vs.\ sections and code.}
+  \label{tab:marking}
 \end{table}
 
-% ---------------------------------------------------------------------------
-\section{Completed application}
-\label{sec:application}
-
-\subsection{Feature overview}
-Procedural terrain mesh with bilinear sampling; grass textured base mesh then alpha-blended splats for rock, stone, and mountain where slope/height masks apply (\texttt{src/Terrain.cpp}); simple longitudinal vehicle dynamics with steering, rolling resistance, and braking; kinematic terrain following (pose from surface normal); chase camera; crate and boulder with AABB/sphere collision; boulder under gravity with impulse from the vehicle hull; hierarchical windmill draw with animation time advanced each frame; day/night lighting and clear colour; on-screen HUD (\texttt{ID3DXFont}); resize-safe device reset path for the font.
-
-\subsection{Executable and source layout}
-Submit the Release binary as \texttt{Game\_Build/maeg4060\_stage2.exe} together with \texttt{Game\_Build/Assets/} (see \texttt{scripts/package\_game\_build.bat} or CMake \texttt{install}). Source layout:
-
+\subsection{Core features}
 \begin{itemize}
-  \item Entry: \texttt{src/main.cpp}; simulation/render orchestration: \texttt{src/Game.cpp}.
-  \item Rendering/device: \texttt{src/Graphics.cpp}; camera: \texttt{src/Camera.cpp}; static meshes: \texttt{src/ModelLoader.cpp}; hierarchy/animation: \texttt{src/AnimatedModel.cpp}; terrain: \texttt{src/Terrain.cpp}; vehicle: \texttt{src/Vehicle.cpp}; collision helpers: \texttt{src/Collision.cpp}; input: \texttt{src/Input.cpp}.
-  \item Build: \texttt{CMakeLists.txt} (target \texttt{maeg4060\_stage2}, links \texttt{d3d9}, \texttt{d3dx9}, \texttt{xinput9\_1\_0}).
-  \item Assets: static props now support \texttt{Assets/models/replacements/*.obj + *.mtl + textures} with fallback to legacy \texttt{Assets/models/*.x}; terrain textures are generated at runtime if no image files are supplied.
+  \item Procedural heightfield terrain with bilinear height sampling.
+  \item Grass base plus slope/height-driven splat layers (rock, stone, mountain).
+  \item Vehicle driving with steering, throttle/brake, and terrain-normal alignment.
+  \item Windmill: hierarchical \texttt{.x} with \texttt{ID3DXAnimationController} when keyframed data is present; static mesh path uses subset draws / code-driven motion when animation sets are absent (\S\ref{sec:animation}).
+  \item Collision with crate (AABB) and dynamic boulder (sphere, gravity, impulse).
+  \item HUD: smoothed FPS, speed, world position, simulation clock, windmill mode (animation vs.\ static spin vs.\ paused), terrain mode/splat summary, optional mini-map/legend; plus day/night lighting.
 \end{itemize}
 
-\subsection{Screenshots}
-Figures~\ref{fig:shot-sandbox} and~\ref{fig:shot-actions} show the running DirectX~9.0c sandbox and a GitHub Actions run page (workflow \#14: boulder and windmill models) displaying the same application.
-
+\subsection{Runtime screenshots}
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.92\linewidth]{screenshot_sandbox_windmill.png}
-  \caption{In-application view: procedural terrain with grass/rock/stone splats, windmill with hierarchy animation, props with crate texture, and HUD (speed, camera position, splat summary).}
-  \label{fig:shot-sandbox}
+  \sandboxScreenshot
+  \caption{In-application view: procedural splats, windmill, vehicle, props, and HUD.}
+  \label{fig:runtime}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.92\linewidth]{screenshot_github_actions_run.png}
-  \caption{GitHub Actions: workflow run documenting boulder and windmill integration; inset shows the sandbox with windmill, boulder, crate, vehicle, and terrain HUD.}
-  \label{fig:shot-actions}
+  \ciScreenshot
+  \caption{GitHub Actions workflow run showing the integrated sandbox result.}
+  \label{fig:ci}
 \end{figure}
 
-% ---------------------------------------------------------------------------
-\section{User guide}
-\label{sec:user-guide}
+\section{How to run and evaluate}\sectionrule
+\label{sec:run}
 
 \subsection{System requirements}
-Windows~10 or later (64-bit recommended), DirectX~9 compatible GPU, display at least $1280\times720$. D3DX is supplied at build time either via the June 2010 DirectX SDK (\texttt{DXSDK\_DIR}) or CMake-downloaded \texttt{Microsoft.DXSDK.D3DX} (see Appendix~\ref{app:build}); the packaged build may include \texttt{D3DX9\_43.dll}. Optional Xbox-compatible controller (XInput).
+Windows 10 or later (64-bit recommended), DirectX~9 compatible GPU, display at least $1280\times720$. Optional Xbox-compatible controller (XInput).
 
-\subsection{Installation and running}
-Run \texttt{maeg4060\_stage2.exe} from \texttt{Game\_Build} with \texttt{Assets} alongside it, or run from the repo root after CMake sets the VS debugger working directory. Build instructions are in the standalone user guide PDF.
+\subsection{Launch}
+Run \texttt{maeg4060\_stage2.exe} from \texttt{Game\_Build} with \texttt{Assets} beside the executable. Build details are summarized in \S\ref{sec:build}. The \textbf{standalone user guide} deliverable (\texttt{docs/User\_Guide.pdf}) contains the authoritative control list, requirements, and troubleshooting; this section duplicates only the essentials.
 
 \subsection{Controls}
-\label{sec:user-controls}
-
-\subsubsection{Keyboard}
-\begin{tabular}{@{}ll@{}}
+\begin{center}
+\renewcommand{\arraystretch}{1.18}
+\begin{tabular}{@{}>{\bfseries}p{3.15cm}p{6.85cm}@{}}
   \toprule
-  \textbf{Input} & \textbf{Action} \\
+  \multicolumn{1}{@{}l}{\textcolor{Brand}{\textbf{Input}}} &
+  \multicolumn{1}{l}{\textcolor{Brand}{\textbf{Action}}} \\
   \midrule
   W / S & Throttle forward / reverse \\
   A / D & Steer left / right \\
   Space & Brake \\
-  M & Pause / resume windmill animation (when available) \\
+  M & Pause / resume windmill animation \\
   Esc & Exit application \\
   \bottomrule
 \end{tabular}
+\end{center}
 
-\subsubsection{Gamepad}
-Left stick: steering. Right trigger: forward throttle. Left trigger: brake and partial reverse (see \texttt{src/Input.cpp}).
+\medskip
+\noindent\textbf{Gamepad:} left stick steers; right trigger throttles; left trigger brakes / partial reverse.
 
-\subsection{Troubleshooting}
-Missing \texttt{d3dx9\_*.dll}: install the legacy DirectX end-user runtime. Missing models: verify \texttt{Assets/models} relative to the process working directory. Black screen after resize: update GPU drivers; the sample calls \texttt{ID3DXFont::OnLostDevice}/\texttt{OnResetDevice} around \texttt{IDirect3DDevice9::Reset}.
+\subsection{Quick troubleshooting}
+\begingroup\sloppy
+\begin{itemize}
+  \item Missing D3DX DLL: install the legacy DirectX end-user runtime, or ship \texttt{D3DX9\_43.dll} next to the exe when the build copies it.
+  \item Missing models or textures: keep \texttt{Assets/} next to the executable (working directory must resolve relative paths).
+  \item Blank screen after window resize: the sample calls font and device lost/reset around \texttt{IDirect3DDevice9::Reset}---confirm GPU drivers; see user guide if issues persist.
+\end{itemize}
+\endgroup
 
-% ---------------------------------------------------------------------------
-\section{Technical description}
-\label{sec:technical}
+\section{Implementation summary}\sectionrule
+\label{sec:impl}
 
-This section summarizes the main techniques used in the DirectX~9.0c (fixed-function pipeline) implementation: terrain sampling, vehicle--terrain coupling, collision choices, animation, lighting, and environmental effects. The application is a physics sandbox (not a scored game).
+\subsection{Frame pipeline}
+The loop is input $\rightarrow$ update $\rightarrow$ render. Input uses \texttt{GetAsyncKeyState} and \texttt{XInput\-Get\-State}; update integrates vehicle and boulder motion, resolves collisions, advances animation timing, and updates lighting; render draws terrain, models, and HUD via the fixed-function Direct3D~9 pipeline.
 
-\subsection{Architecture overview}
-The real-time loop follows input $\rightarrow$ simulation $\rightarrow$ rendering: keyboard via \texttt{GetAsyncKeyState}, gamepad via \texttt{XInputGetState}; \texttt{Game::Update} integrates the vehicle and boulder, resolves collisions, advances animation time, and updates lighting parameters; \texttt{Game::Render} sets the chase camera, draws terrain, hierarchy model, props, and vehicle with the fixed-function pipeline and a font overlay.
-
-\subsection{DirectX~9 rendering}
-The renderer uses a Direct3D~9 device with a depth--stencil buffer, textured meshes, and directional lighting. Meshes and animations are loaded from the \texttt{.X} format; the coordinate system is left-handed, consistent with \texttt{D3DXMatrixLookAtLH} and standard DirectX samples.
-
-\subsection{Terrain and model navigation}
-\label{sec:techniques-terrain}
-
-\subsubsection{Bilinear interpolation for terrain height}
-The terrain height at an arbitrary world position $(x,z)$ is obtained from a heightmap grid. To avoid discrete ``stair-stepping'' when the vehicle moves, the engine samples the four neighbouring heightmap texels and applies \textbf{bilinear interpolation}:
+\subsection{Terrain and navigation}
+\label{sec:terrain}
+Terrain height uses bilinear interpolation:
 \[
-h(x,z) = (1-t_x)(1-t_z)\,h_{00} + t_x(1-t_z)\,h_{10} + (1-t_x)t_z\,h_{01} + t_x t_z\,h_{11},
+h(x,z) = (1-t_x)(1-t_z)h_{00} + t_x(1-t_z)h_{10} + (1-t_x)t_z h_{01} + t_x t_z h_{11}.
 \]
-where $t_x,t_z \in [0,1]$ are fractional coordinates within the cell. This yields a continuous height field suitable for stable contact and visual alignment.
+The vehicle aligns its up vector with the local terrain normal; steering sets yaw for stable hill following.
 
-\subsubsection{Surface normal alignment}
-The vehicle's up vector is aligned with the \textbf{terrain surface normal}, computed from the local geometry (e.g.\ cross product of edges on the heightfield triangle under the vehicle). Pitch and roll follow the normal while yaw is driven by steering input, giving kinematic terrain-following without penetrating the mesh.
+\subsection{Physics and collision}
+\label{sec:physics}
+Crate: AABB tests. Boulder: bounding sphere with gravity and simple impulses on vehicle contact (lightweight dynamic object).
 
-\subsection{Animation}
-\label{sec:techniques-animation}
-\textbf{Maya keyframed} animation for the windmill is exported in the \texttt{.X} format. The runtime uses \texttt{D3DXLoadMeshHierarchyFromX} with an \texttt{ID3DXAllocateHierarchy} implementation (\texttt{src/AnimatedModel.cpp}) and advances \texttt{ID3DXAnimationController} each frame. The jeep mesh is drawn as a single subset from \texttt{D3DXLoadMeshFromX} without per-wheel hierarchy in this build.
+\subsection{Animation and rendering}
+\label{sec:animation}
+\textbf{Windmill.}\quad
+If the hierarchy load from \texttt{model\_windmill.x} succeeds and reports animation sets, \texttt{Game::Update} advances \texttt{ID3DXAnimationController} time each frame (unless paused with \texttt{M}). If loading falls back to static geometry (OBJ or static \texttt{.x}), the renderer uses mesh subset draws; sail motion may be driven in code for that path---not via the keyframed controller.
 
-\subsection{Collision detection and response}
-\label{sec:techniques-collision}
+\medskip
+\noindent\textbf{Scene lighting.}\quad
+A day/night style effect moves the sun direction and interpolates clear and ambient colours (\texttt{Game.cpp}).
 
-\subsubsection{Axis-aligned bounding boxes (AABB)}
-\textbf{Rectangular props} (e.g.\ wooden crates) use \textbf{AABB} tests: fast intersection in world space along $x$, $y$, and $z$ extents. Response can slide or push the vehicle along the minimum penetration axis.
+\section{3D models, media, and authorship}\sectionrule
+\label{sec:assets}
 
-\subsubsection{Bounding spheres}
-\textbf{Irregular objects} (e.g.\ boulders) use \textbf{bounding sphere} collision: distance between sphere centres compared to the sum of radii. Spheres are cheap to update when objects rotate or roll and pair well with impulse-based response for loose rocks.
+\subsection{Authorship statement}
+Vehicle, windmill, crate, and boulder meshes/materials under \texttt{Assets/models/} are original work by Guo Tsun Hei. Runtime terrain is generated procedurally. Sketchfab links in Stage~1 were references only, not shipped geometry.
 
-\subsubsection{Dynamic boulder interaction}
-\textbf{Vehicle--boulder} contact applies positional correction and a simple impulse so the boulder can roll on slopes; sphere tests against the vehicle AABB and crate AABB are used (details in \S\ref{sec:bonus}).
+\subsection{Integration notes}
+\begingroup\sloppy
+\noindent\textbf{Jeep, crate, and boulder.}\quad
+\texttt{Game::Initialize} calls \texttt{LoadStaticModelCandidates} in \texttt{src/Game.cpp}; each candidate path is tried until one loads.
 
-\subsection{Physics and simulation}
-\label{sec:techniques-physics}
-Gravity is applied to the boulder as a constant downward acceleration (engine constant $\approx 28$ units/s$^2$ for stable stepping). The vehicle uses semi-implicit longitudinal integration with throttle, rolling resistance, and brake terms (\texttt{src/Vehicle.cpp}).
+\begin{itemize}\setlength\itemsep{0.25em}
+  \item \textbf{Jeep:} four attempts (bundled OBJ, flat replacement OBJ, root \texttt{model\_jeep.obj}, then \texttt{model\_jeep.x}).
+  \item \textbf{Crate / boulder:} three OBJ attempts each (bundled, flat replacement, then root models folder). No \texttt{.x} list; if all fail, a textured box or sphere is built.
+\end{itemize}
 
-\subsection{Environmental effects}
-A \textbf{day/night cycle} orbits the directional light and interpolates clear and ambient colours (\texttt{src/Game.cpp}). \textbf{Texture splatting} draws a grass-textured heightfield, then alpha-blends rock (vertex diffuse alpha from slope), then optional stone and mountain overlays on dedicated vertex streams where mask weights are non-zero. The HUD shows speed, world position, simulation time, and windmill state.
+\noindent\textbf{Windmill.}\quad
+The animated hierarchy at \texttt{Assets/models/model\_windmill.x} is tried first. If that fails, static OBJs are tried in the same folder pattern as other props, with \texttt{model\_windmill.x} last (no animation).
 
-\subsection{Bonus work}
-\label{sec:bonus}
-\textbf{Partial bonus:} the boulder is dynamic (gravity, velocity, sphere versus vehicle AABB and crate AABB with positional correction and simple impulse when hit by the vehicle). Full rigid-body stacking and boulder--boulder coupling are not implemented.
-
-% ---------------------------------------------------------------------------
-\section{3D models: sources and modifications}
-\label{sec:models}
-
-Per course requirements, external assets are listed with Sketchfab links and licenses. The \textbf{modifications} bullets summarize how each asset was adapted for this engine (scale, export format, collision, in-engine fallback paths).
-
-\begingroup
-\sloppy
-\setlength{\emergencystretch}{4em}
-
-\begin{enumerate}
-  \item \textbf{Half Dome Terrain Landscape}
-    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
-      \item Author: Studio Lab
-      \item License: Creative Commons Attribution (CC BY 4.0)
-      \item Source: Sketchfab
-      \item URL: \url{https://sketchfab.com/3d-models/half-dome-terrain-landscape-86ef075dc7d9414583ac2180e1e651a3}
-      \item Usage: Reference for high-resolution terrain geometry and heightmap generation.
-      \item Modifications: In-engine procedural heightfield ($129\times 129$ vertices, $200\times 200$ world units) with analytic multi-frequency hills instead of the original Sketchfab mesh; runtime-generated grass/rock textures.
-    \end{itemize}
-
-  \item \textbf{Controllable Vehicle (ATV)}
-    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
-      \item Title: ATV from game ``PURE''
-      \item Author: barking\_dogo
-      \item License: Creative Commons Attribution (CC BY 4.0)
-      \item Source: Sketchfab
-      \item URL: \url{https://sketchfab.com/3d-models/atv-from-game-pure-f2e454611ebd4151b9d7aa31815c35e4}
-      \item Usage: Main controllable vehicle model (wheel nodes separated for procedural animation).
-      \item Modifications: Shipped as Wavefront OBJ under \texttt{Assets/models/replacements/model\_jeep/} when present, with \texttt{model\_jeep.x} as fallback; scaled and placed with a world matrix from terrain normal and yaw; collision hull is a tuned AABB.
-    \end{itemize}
-
-  \item \textbf{Rock Boulder (Game Ready Asset)}
-    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
-      \item Author: Aparicio Silva 3D
-      \item License: Creative Commons Attribution (CC BY 4.0)
-      \item Source: Sketchfab
-      \item URL: \url{https://sketchfab.com/3d-models/rock-boulder-game-ready-asset-0079cb0e717c4aeebe6bca21ec21b0d9}
-      \item Usage: Dynamic physics / bounding-sphere collision.
-      \item Modifications: OBJ under \texttt{Assets/models/replacements/model\_boulder/} when present, else \texttt{model\_boulder.x}; uniform scale for gameplay radius $\approx 2.2$; sphere collision and ground contact at terrain height plus radius.
-    \end{itemize}
-
-  \item \textbf{Windmill}
-    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
-      \item Author: KIFIR
-      \item License: Creative Commons Attribution (CC BY 4.0)
-      \item Source: Sketchfab
-      \item URL: \url{https://sketchfab.com/3d-models/windmill-fe13862b9e3c4dc887d10e297d86f17f}
-      \item Usage: Keyframed animation and environmental aesthetics.
-      \item Modifications: OBJ under \texttt{replacements/model\_windmill/} when present, else \texttt{model\_windmill.x}; Maya keyframes in \texttt{.x}; playback via \texttt{ID3DXAnimationController} when animation sets exist.
-    \end{itemize}
-
-  \item \textbf{Wooden Crate}
-    \begin{itemize}\setlength\itemsep{2pt}\setlength\parskip{0pt}
-      \item Author: Domingos Studios
-      \item License: Creative Commons Attribution (CC BY 4.0)
-      \item Source: Sketchfab
-      \item URL: \url{https://sketchfab.com/3d-models/wooden-crate-3c0259d17f3b4306890cdc809b545670}
-      \item Usage: Static collision (AABB).
-      \item Modifications: OBJ under \texttt{replacements/model\_crate/} when present, else \texttt{model\_crate.x}; world placement at $(-35, h, 48)$ with AABB half-extents $(2.2,2.2,2.2)$ for collision.
-    \end{itemize}
-\end{enumerate}
-
+\medskip
+\noindent\textbf{Scene setup.}\quad
+After load, meshes are placed in world space; \texttt{BuildReplacementMeshCorrection} adjusts orientation and scale where needed.
 \endgroup
 
-% ---------------------------------------------------------------------------
-\section{Conclusion}
+\subsection{Static figure evidence}
+
+\subsubsection{Authoring-tool viewports}
+These stills support texture work and scale; playable terrain remains procedural (see \texttt{Terrain.cpp}).
+
+\begin{figure}[htbp]
+  \centering
+  \setlength{\fboxsep}{5pt}%
+  \setlength{\fboxrule}{0.55pt}%
+  \fcolorbox{AbstractFrame}{white}{%
+    \includegraphics[width=\AuthfigWidth]{modeling_viewport_crate_boulder.png}}
+  \caption{Crate and boulder meshes in the authoring viewport.}
+  \label{fig:modeling-crate}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \setlength{\fboxsep}{5pt}%
+  \setlength{\fboxrule}{0.55pt}%
+  \fcolorbox{AbstractFrame}{white}{%
+    \includegraphics[width=\AuthfigWidth]{modeling_viewport_terrain.png}}
+  \caption{Terrain sculpt and materials in the authoring tool (\emph{playable hills are procedural in the exe}).}
+  \label{fig:modeling-terrain}
+\end{figure}
+
+\subsubsection{Cinema 4D source frames (jeep and windmill)}
+Representative frames from screen recordings under \texttt{docs/media/}; GIF variants are listed in \S\ref{sec:video-readme}.
+
+\begin{figure}[htbp]
+  \centering
+  \setlength{\fboxsep}{5pt}%
+  \setlength{\fboxrule}{0.55pt}%
+  \fcolorbox{AbstractFrame}{white}{%
+    \includegraphics[width=\AuthfigWidth]{c4d_car_viewport_frame.png}}
+  \caption{Jeep source model: Cinema~4D viewport (frame from recorded session).}
+  \label{fig:c4d-jeep}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \setlength{\fboxsep}{5pt}%
+  \setlength{\fboxrule}{0.55pt}%
+  \fcolorbox{AbstractFrame}{white}{%
+    \includegraphics[width=\AuthfigWidth]{c4d_windmill_viewport_frame.png}}
+  \caption{Windmill source model: Cinema~4D viewport (frame from recorded session).}
+  \label{fig:c4d-windmill}
+\end{figure}
+
+\subsection{Video and README media}
+\label{sec:video-readme}
+\noindent Recordings (paths in repo):\quad \texttt{docs/media/c4d-car-viewport.mp4} and\\
+\texttt{docs/media/c4d-windmill-viewport.mp4}.\\
+GIFs for the GitHub README live under \texttt{docs/images/}.
+
+\section{Build and packaging notes}\sectionrule
+\label{sec:build}
+
+\subsection{Toolchain}
+Windows CMake, C++17, MSVC recommended. Target \texttt{maeg4060\_stage2}. Links \texttt{d3d9}, \texttt{d3dx9}, \texttt{xinput9\_1\_0}.
+
+\subsection{D3DX path}
+\begingroup\sloppy\small
+\noindent\textbf{(1)}~Set \texttt{DXSDK\_DIR} to the June 2010 DirectX SDK.\quad
+\textbf{(2)}~Or configure without it and let CMake obtain the NuGet D3DX package (see \texttt{CMakeLists.txt}).\par
+\noindent Post-build or install steps may copy \texttt{D3DX9\_43.dll} beside the executable when available.
+\endgroup
+
+\subsection{Packaging target}
+Submit the full \texttt{Game\_Build} folder (executable, \texttt{Assets/}, required DLLs), not the \texttt{.exe} alone.
+
+\section{Conclusion}\sectionrule
 \label{sec:conclusion}
-The sandbox meets the core Stage~3 requirements in a compact codebase. Known limitations: no audio, no skinned character pipeline, jeep wheels are not independently articulated in code, and terrain is procedural rather than artist-authored DEM data. Future work could import a real heightmap PNG, add wheel bones from hierarchy, and extend physics to full rigid-body contact.
+The deliverable is a compact DirectX~9 sandbox: terrain navigation, input, collision, animation integration, and team-authored 3D content. Submission materials include this report, the standalone user guide PDF, staged course PDFs, source, \texttt{Assets/}, and build instructions; the public GitHub repository hosts the CI-backed tree used for integration screenshots.
 
-% ---------------------------------------------------------------------------
-\section{References}
-\begingroup
-\sloppy
-\setlength{\emergencystretch}{4em}
+\medskip
+\noindent\textbf{Known limitations.}\quad
+There is no audio engine. The jeep has no per-wheel articulation in code. Terrain is procedural at runtime rather than a single imported artist heightmap (optional image heightfields are supported when assets exist). The boulder uses simplified sphere--box response rather than full rigid-body stacks. These bounds keep the codebase small while meeting sandbox and course demonstration goals.
+
+\medskip
+\noindent\textbf{Possible extensions.}\quad
+Import a large heightmap PNG, extend rigging for wheel bones, add richer rigid-body contact, and optional PBR or shader-based terrain beyond the fixed-function pipeline.
+
+\section{References}\sectionrule
+\begingroup\sloppy\small
 \begin{itemize}
-  \item Course project description (MAEG4060, 2025--26 Semester 2).
-  \item DirectX SDK / MSDN documentation.
-  \item External assets: cite consistently with \S\ref{sec:models}.
+  \item MAEG4060 Virtual Reality Systems and Applications --- course project description (2025--26, Semester~2), CUHK Faculty of Engineering.
+  \item Microsoft Learn / MSDN: Direct3D~9, D3DX~9 utilities, XInput.\newline
+        \url{https://learn.microsoft.com/en-us/windows/win32/direct3d9}
+  \item D3DX via NuGet package \texttt{Microsoft.DXSDK.D3DX}; see \texttt{CMakeLists.txt}.
+  \item CMake documentation: \url{https://cmake.org/documentation/}
+  \item GitHub repository and CI:\newline
+        \url{https://github.com/Rex-Yim/Direct3DTerrainModels}
+  \item Local checkout: \texttt{src/}, \texttt{CMakeLists.txt}, \texttt{docs/User\_Guide.pdf}.
 \end{itemize}
 \endgroup
-
-\appendix
-
-\section{Appendix A: Build configuration}
-\label{app:build}
-
-The project is a \textbf{Windows} CMake target \texttt{maeg4060\_stage2} (\texttt{WIN32} subsystem), C++\textbf{17}, \texttt{cmake\_minimum\_required(3.20)}. MSVC is used with warning level \texttt{/W4} and static runtime selection \texttt{MultiThreaded} (Release) / \texttt{MultiThreadedDebug} (Debug). Preprocessor definitions \texttt{UNICODE} and \texttt{\_UNICODE} are set on the main executable (and on the small helper targets \texttt{empty\_window} and \texttt{d3d\_device} in the same \texttt{CMakeLists.txt}).
-
-\textbf{D3DX headers and import library:} either (1)~set environment variable \texttt{DXSDK\_DIR} to the root of the \textbf{June 2010 DirectX SDK} (folders \texttt{Include} and \texttt{Lib/x64} or \texttt{Lib/x86}), or (2)~leave it unset so CMake downloads NuGet package \texttt{Microsoft.DXSDK.D3DX} version \textbf{9.29.952.8} into the build tree on first configure (requires network once), then uses its \texttt{build/native/include} and \texttt{lib} paths. If the NuGet path is used, a post-build step copies \texttt{D3DX9\_43.dll} next to the executable when present.
-
-\textbf{Linked system / redistributable APIs:} \texttt{d3d9}, \texttt{d3dx9}, \texttt{xinput9\_1\_0}. A post-build step copies the \texttt{Assets/} directory beside the built \texttt{.exe}. CMake \texttt{install} installs the game executable, \texttt{Assets/}, and the D3DX DLL when applicable (\texttt{scripts/package\_game\_build.bat} or \texttt{cmake --install} for a \texttt{Game\_Build}-style layout).
-
-\textbf{Recommendation:} Release configuration for markers; Ninja or Visual Studio generators; 64-bit (\texttt{x64}) builds match the documented D3DX library paths.
-
-\section{Appendix B: Third-party libraries and runtime components}
-\label{app:libs}
-
-The application \textbf{does not} link separate general-purpose C++ libraries (no Eigen, Boost, or similar in \texttt{CMakeLists.txt}). Mathematics and mesh helpers use \textbf{D3DX} (\texttt{D3DXMath}, mesh loaders) from the same D3DX stack as Appendix~\ref{app:build}.
-
-\textbf{Microsoft components (linked or loaded at runtime):}
-\begin{itemize}
-  \item \textbf{Direct3D~9} (\texttt{d3d9.dll}) --- system component on Windows; used for device creation, fixed-function pipeline drawing, and textures.
-  \item \textbf{D3DX~9} (\texttt{d3dx9\_*.dll} / import library \texttt{d3dx9.lib}) --- legacy D3DX utilities (math, mesh, font, effect helpers). Headers/libs from June 2010 SDK or from the \texttt{Microsoft.DXSDK.D3DX} NuGet package; redistribution of \texttt{D3DX9\_43.dll} follows Microsoft's terms for that package or the legacy DirectX end-user runtime, as applicable to your distribution channel.
-  \item \textbf{XInput} (\texttt{xinput9\_1\_0.dll}) --- gamepad input; typically present on Windows.
-\end{itemize}
-
-\textbf{3D assets} (Sketchfab models and textures) are listed with licenses in \S\ref{sec:models}; they are data files under \texttt{Assets/}, not compile-time libraries.
-
-\clearpage
-\phantomsection
-% Pull the appendix block up on the page (default \section spacing leaves a large gap).
-\vspace*{-4\baselineskip}
-\section{Appendix C: User Guide (standalone PDF)}
-\label{app:user-guide-pdf}
-\vspace{-2.5ex}
-\noindent
-The following pages reproduce the submitted user guide (\texttt{User\_Guide.pdf}): controls (keyboard and gamepad), hardware and software requirements, launch instructions, and troubleshooting.
-\par\vspace{0.75ex}
-% pdfpages always \clearpage before the first included page; relax it only for page 1 so the
-% first sheet follows the intro instead of leaving a title-only page. Remaining pages keep normal breaks.
-\begingroup
-\let\clearpage\relax
-\includepdf[pages=1,offset=0 -14bp]{../User_Guide.pdf}
-\endgroup
-\includepdf[pages=2-,offset=0 -14bp]{../User_Guide.pdf}
 
 \end{document}

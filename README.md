@@ -1,6 +1,8 @@
 # MAEG4060 — Off-road terrain sandbox (DirectX 9)
 
-Course project: an interactive **DirectX 9.0c** sandbox on procedural mountainous terrain—vehicle dynamics, splatted terrain, props, and a windmill with Maya-exported animation (`.X` / `ID3DXAnimationController`).
+**Repository:** [github.com/Rex-Yim/Direct3DTerrainModels](https://github.com/Rex-Yim/Direct3DTerrainModels)
+
+Course project: an interactive **DirectX 9.0c** sandbox on procedural mountainous terrain—vehicle dynamics, splatted terrain, props, and a windmill with hierarchy animation (`.x` / `ID3DXAnimationController` when present) or static-mesh drawing with code-driven motion when not.
 
 ## Screenshots
 
@@ -11,6 +13,20 @@ Course project: an interactive **DirectX 9.0c** sandbox on procedural mountainou
 **CI** — GitHub Actions run for the *boulder and windmill models* workflow, with the application visible in the run summary:
 
 ![GitHub Actions run with sandbox inset](docs/images/screenshot_github_actions_run.png)
+
+**Cinema 4D viewports** (same sessions as `docs/media/c4d-*.mp4`; GIFs for inline README playback):
+
+| Jeep (source mesh) | Windmill (source mesh) |
+| --- | --- |
+| ![C4D viewport: jeep](docs/images/c4d-car-viewport.gif) | ![C4D viewport: windmill](docs/images/c4d-windmill-viewport.gif) |
+
+Full recordings: [`docs/media/c4d-car-viewport.mp4`](docs/media/c4d-car-viewport.mp4), [`docs/media/c4d-windmill-viewport.mp4`](docs/media/c4d-windmill-viewport.mp4).
+
+**Modeling tool stills** (crate/boulder and terrain reference meshes—these appear as figures in the **3D models** section of `docs/stageFinal.pdf`):
+
+| Props | Terrain reference |
+| --- | --- |
+| ![Crate and boulder in authoring tool](docs/images/modeling_viewport_crate_boulder.png) | ![Terrain mesh in authoring tool](docs/images/modeling_viewport_terrain.png) |
 
 ## Repository layout
 
@@ -23,4 +39,4 @@ See **`docs/User_Guide.pdf`** (source: `docs/latex/user_guide.tex`) for controls
 
 ## License / course
 
-Academic coursework (CUHK MAEG4060). Third-party 3D assets are credited in the report (section *3D models: sources and modifications*).
+Academic coursework (CUHK MAEG4060). Authorship of the shipped meshes and how they are integrated in-engine are described in the report (section *3D models: authorship and engine integration*).
