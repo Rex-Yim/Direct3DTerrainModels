@@ -38,6 +38,7 @@ public:
 private:
     void ApplyLighting(IDirect3DDevice9* device);
     void DrawHud(IDirect3DDevice9* device, int client_w, int client_h);
+    void DrawMiniMap(IDirect3DDevice9* device, int client_w, int client_h);
     void ResolveCollisions();
 
     HWND hwnd_ = nullptr;

@@ -76,6 +76,41 @@ struct StaticModelLoadResult {
     std::wstring attempts_log;
 };
 
+struct HudVertex {
+    float x, y, z, rhw;
+    DWORD color;
+};
+
+constexpr DWORD kHudFvf = D3DFVF_XYZRHW | D3DFVF_DIFFUSE;
+
+void DrawQuad2D(IDirect3DDevice9* device, float x0, float y0, float x1, float y1, DWORD color) {
+    if (!device) {
+        return;
+    }
+    const float px0 = x0 - 0.5f;
+    const float py0 = y0 - 0.5f;
+    const float px1 = x1 - 0.5f;
+    const float py1 = y1 - 0.5f;
+    const HudVertex verts[4] = {
+        {px0, py0, 0.0f, 1.0f, color},
+        {px1, py0, 0.0f, 1.0f, color},
+        {px0, py1, 0.0f, 1.0f, color},
+        {px1, py1, 0.0f, 1.0f, color},
+    };
+    device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, verts, sizeof(HudVertex));
+}
+
+void DrawLine2D(IDirect3DDevice9* device, float x0, float y0, float x1, float y1, DWORD color) {
+    if (!device) {
+        return;
+    }
+    const HudVertex verts[2] = {
+        {x0 - 0.5f, y0 - 0.5f, 0.0f, 1.0f, color},
+        {x1 - 0.5f, y1 - 0.5f, 0.0f, 1.0f, color},
+    };
+    device->DrawPrimitiveUP(D3DPT_LINELIST, 1, verts, sizeof(HudVertex));
+}
+
 template <size_t N>
 StaticModelLoadResult LoadStaticModelCandidates(IDirect3DDevice9* device,
                                                 ModelLoader* loader,
@@ -468,6 +503,113 @@ void Game::DrawHud(IDirect3DDevice9* device, int client_w, int client_h) {
     rw_shadow.bottom += 2;
     font_->DrawTextW(nullptr, wasd_overlay, -1, &rw_shadow, wasd_fmt, D3DCOLOR_ARGB(240, 0, 0, 0));
     font_->DrawTextW(nullptr, wasd_overlay, -1, &rw, wasd_fmt, D3DCOLOR_ARGB(255, 255, 245, 160));
+
+    DrawMiniMap(device, client_w, client_h);
+}
+
+void Game::DrawMiniMap(IDirect3DDevice9* device, int client_w, int client_h) {
+    if (!device || client_w < 240 || client_h < 220) {
+        return;
+    }
+
+    const float map_size = 170.0f;
+    const float margin = 14.0f;
+    const float map_left = static_cast<float>(client_w) - map_size - margin;
+    const float map_top = margin;
+    const float map_right = map_left + map_size;
+    const float map_bottom = map_top + map_size;
+
+    const DWORD prev_fvf = device->GetFVF();
+    DWORD prev_lighting = FALSE;
+    DWORD prev_z = FALSE;
+    DWORD prev_alpha = FALSE;
+    DWORD prev_src = D3DBLEND_ONE;
+    DWORD prev_dst = D3DBLEND_ZERO;
+    device->GetRenderState(D3DRS_LIGHTING, &prev_lighting);
+    device->GetRenderState(D3DRS_ZENABLE, &prev_z);
+    device->GetRenderState(D3DRS_ALPHABLENDENABLE, &prev_alpha);
+    device->GetRenderState(D3DRS_SRCBLEND, &prev_src);
+    device->GetRenderState(D3DRS_DESTBLEND, &prev_dst);
+
+    device->SetTexture(0, nullptr);
+    device->SetFVF(kHudFvf);
+    device->SetRenderState(D3DRS_LIGHTING, FALSE);
+    device->SetRenderState(D3DRS_ZENABLE, FALSE);
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+
+    DrawQuad2D(device, map_left, map_top, map_right, map_bottom, D3DCOLOR_ARGB(130, 12, 18, 24));
+    DrawLine2D(device, map_left, map_top, map_right, map_top, D3DCOLOR_ARGB(220, 180, 210, 240));
+    DrawLine2D(device, map_right, map_top, map_right, map_bottom, D3DCOLOR_ARGB(220, 180, 210, 240));
+    DrawLine2D(device, map_right, map_bottom, map_left, map_bottom, D3DCOLOR_ARGB(220, 180, 210, 240));
+    DrawLine2D(device, map_left, map_bottom, map_left, map_top, D3DCOLOR_ARGB(220, 180, 210, 240));
+
+    const float half_w = terrain_.HalfWidth();
+    const float half_d = terrain_.HalfDepth();
+    const auto world_to_map = [&](const D3DXVECTOR3& p, float* out_x, float* out_y) {
+        const float u = std::clamp((p.x + half_w) / (2.0f * half_w), 0.0f, 1.0f);
+        const float v = std::clamp((p.z + half_d) / (2.0f * half_d), 0.0f, 1.0f);
+        *out_x = map_left + u * map_size;
+        *out_y = map_top + v * map_size;
+    };
+
+    auto draw_marker = [&](const D3DXVECTOR3& pos, float radius, DWORD color) {
+        float mx = 0.0f;
+        float my = 0.0f;
+        world_to_map(pos, &mx, &my);
+        DrawQuad2D(device, mx - radius, my - radius, mx + radius, my + radius, color);
+    };
+
+    draw_marker(crate_pos_, 2.5f, D3DCOLOR_ARGB(230, 255, 210, 80));
+    draw_marker(boulder_pos_, 2.8f, D3DCOLOR_ARGB(230, 255, 120, 120));
+    draw_marker(windmill_pos_, 2.5f, D3DCOLOR_ARGB(230, 120, 220, 255));
+
+    const VehicleState& vs = vehicle_.State();
+    float vx = 0.0f;
+    float vy = 0.0f;
+    world_to_map(vs.position, &vx, &vy);
+    DrawQuad2D(device, vx - 3.0f, vy - 3.0f, vx + 3.0f, vy + 3.0f, D3DCOLOR_ARGB(245, 80, 255, 120));
+    const float dir_len = 9.0f;
+    DrawLine2D(device, vx, vy, vx + std::sinf(vs.yaw) * dir_len, vy + std::cosf(vs.yaw) * dir_len,
+               D3DCOLOR_ARGB(245, 80, 255, 120));
+
+    device->SetRenderState(D3DRS_SRCBLEND, prev_src);
+    device->SetRenderState(D3DRS_DESTBLEND, prev_dst);
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, prev_alpha);
+    device->SetRenderState(D3DRS_ZENABLE, prev_z);
+    device->SetRenderState(D3DRS_LIGHTING, prev_lighting);
+    device->SetFVF(prev_fvf);
+
+    if (font_) {
+        RECT label{
+            static_cast<LONG>(map_left),
+            static_cast<LONG>(map_bottom + 4.0f),
+            static_cast<LONG>(map_right),
+            static_cast<LONG>(map_bottom + 26.0f),
+        };
+        font_->DrawTextW(nullptr, L"Mini map", -1, &label, DT_LEFT | DT_TOP,
+                         D3DCOLOR_ARGB(230, 200, 230, 255));
+
+        const float legend_y = map_bottom + 22.0f;
+        DrawQuad2D(device, map_left, legend_y + 2.0f, map_left + 7.0f, legend_y + 9.0f,
+                   D3DCOLOR_ARGB(245, 80, 255, 120));
+        DrawQuad2D(device, map_left + 48.0f, legend_y + 2.0f, map_left + 55.0f, legend_y + 9.0f,
+                   D3DCOLOR_ARGB(230, 255, 210, 80));
+        DrawQuad2D(device, map_left + 98.0f, legend_y + 2.0f, map_left + 105.0f, legend_y + 9.0f,
+                   D3DCOLOR_ARGB(230, 255, 120, 120));
+        DrawQuad2D(device, map_left + 150.0f, legend_y + 2.0f, map_left + 157.0f, legend_y + 9.0f,
+                   D3DCOLOR_ARGB(230, 120, 220, 255));
+
+        RECT legend{
+            static_cast<LONG>(map_left + 9.0f),
+            static_cast<LONG>(map_bottom + 20.0f),
+            static_cast<LONG>(map_right + 84.0f),
+            static_cast<LONG>(map_bottom + 42.0f),
+        };
+        font_->DrawTextW(nullptr, L"You  Crate  Boulder  Windmill", -1, &legend, DT_LEFT | DT_TOP,
+                         D3DCOLOR_ARGB(225, 220, 230, 245));
+    }
 }
 
 void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int client_h,
