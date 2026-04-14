@@ -519,7 +519,8 @@ void Game::DrawMiniMap(IDirect3DDevice9* device, int client_w, int client_h) {
     const float map_right = map_left + map_size;
     const float map_bottom = map_top + map_size;
 
-    const DWORD prev_fvf = device->GetFVF();
+    DWORD prev_fvf = 0;
+    device->GetFVF(&prev_fvf);
     DWORD prev_lighting = FALSE;
     DWORD prev_z = FALSE;
     DWORD prev_alpha = FALSE;
