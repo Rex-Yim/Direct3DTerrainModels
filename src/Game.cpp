@@ -419,14 +419,37 @@ void Game::Update(float dt, Graphics& graphics) {
     vehicle_.Update(dt, input_.State().throttle, input_.State().steer, input_.State().brake,
                     terrain_);
 
+    // Simple crate dynamics: keep it on terrain and allow pushes.
+    constexpr float kCrateLinearDamping = 3.2f;
+    crate_vel_.x *= std::exp(-kCrateLinearDamping * dt);
+    crate_vel_.z *= std::exp(-kCrateLinearDamping * dt);
+    crate_pos_ += crate_vel_ * dt;
+    crate_pos_.x = std::clamp(crate_pos_.x, -terrain_.HalfWidth() + 2.5f, terrain_.HalfWidth() - 2.5f);
+    crate_pos_.z = std::clamp(crate_pos_.z, -terrain_.HalfDepth() + 2.5f, terrain_.HalfDepth() - 2.5f);
+    crate_pos_.y = terrain_.SampleHeight(crate_pos_.x, crate_pos_.z);
+
     constexpr float kGravity = 28.f;
     boulder_vel_.y -= kGravity * dt;
+
+    // Boulder damping to prevent runaway speeds from repeated collision kicks.
+    constexpr float kBoulderLinearDamping = 1.4f;
+    boulder_vel_.x *= std::exp(-kBoulderLinearDamping * dt);
+    boulder_vel_.z *= std::exp(-kBoulderLinearDamping * dt);
+
     boulder_pos_ += boulder_vel_ * dt;
     const float ground =
         terrain_.SampleHeight(boulder_pos_.x, boulder_pos_.z) + boulder_radius_;
     if (boulder_pos_.y < ground) {
         boulder_pos_.y = ground;
         boulder_vel_.y *= -0.25f;
+    }
+    // Clamp horizontal speed (safety net).
+    const float horiz_sq = boulder_vel_.x * boulder_vel_.x + boulder_vel_.z * boulder_vel_.z;
+    constexpr float kMaxHoriz = 26.f;
+    if (horiz_sq > kMaxHoriz * kMaxHoriz) {
+        const float inv = 1.f / std::sqrt(horiz_sq);
+        boulder_vel_.x *= inv * kMaxHoriz;
+        boulder_vel_.z *= inv * kMaxHoriz;
     }
     boulder_pos_.x = std::clamp(boulder_pos_.x, -terrain_.HalfWidth() + 3.f,
                                 terrain_.HalfWidth() - 3.f);
@@ -450,8 +473,32 @@ void Game::ResolveCollisions() {
     crate_aabb.center = crate_pos_ + D3DXVECTOR3(0.f, 1.2f, 0.f);
     crate_aabb.half = D3DXVECTOR3(2.2f, 2.2f, 2.2f);
 
-    if (AabbVsAabbResolveFirstAxis(crate_aabb, &jeep_aabb)) {
-        vehicle_.SetFromHullCenter(jeep_aabb.center, terrain_);
+    if (crate_aabb.Intersects(jeep_aabb)) {
+        const float pen_x =
+            (crate_aabb.half.x + jeep_aabb.half.x) - std::fabs(crate_aabb.center.x - jeep_aabb.center.x);
+        const float pen_z =
+            (crate_aabb.half.z + jeep_aabb.half.z) - std::fabs(crate_aabb.center.z - jeep_aabb.center.z);
+        if (pen_x > 0.f && pen_z > 0.f) {
+            D3DXVECTOR3 push(0.f, 0.f, 0.f);
+            if (pen_x < pen_z) {
+                push.x = (jeep_aabb.center.x >= crate_aabb.center.x) ? pen_x : -pen_x;
+            } else {
+                push.z = (jeep_aabb.center.z >= crate_aabb.center.z) ? pen_z : -pen_z;
+            }
+            // Move both: keep vehicle responsive, but allow crate to be pushed.
+            jeep_aabb.center.x += push.x;
+            jeep_aabb.center.z += push.z;
+            crate_aabb.center.x -= push.x * 0.85f;
+            crate_aabb.center.z -= push.z * 0.85f;
+            vehicle_.SetFromHullCenter(jeep_aabb.center, terrain_);
+
+            // Convert displacement into a bit of crate velocity for continued motion.
+            crate_vel_.x += (-push.x) * 2.2f;
+            crate_vel_.z += (-push.z) * 2.2f;
+            crate_pos_.x = crate_aabb.center.x;
+            crate_pos_.z = crate_aabb.center.z;
+            crate_pos_.y = terrain_.SampleHeight(crate_pos_.x, crate_pos_.z);
+        }
     }
 
     Aabb jeep_push = jeep_aabb;
@@ -463,12 +510,20 @@ void Game::ResolveCollisions() {
         rel.y = 0.f;
         if (D3DXVec3LengthSq(&rel) > 1e-4f) {
             D3DXVec3Normalize(&rel, &rel);
-            boulder_vel_ += rel * 3.f;
+            const float kick = std::clamp(std::fabs(vehicle_.State().speed) * 0.08f + 1.0f, 1.0f, 5.0f);
+            boulder_vel_ += rel * (3.f * kick);
         }
     }
 
     if (SphereVsAabbPushSphere(crate_aabb, &boulder)) {
         boulder_pos_ = boulder.center;
+        // Give the crate a small reactive shove when boulder hits it.
+        D3DXVECTOR3 rel = crate_aabb.center - boulder.center;
+        rel.y = 0.f;
+        if (D3DXVec3LengthSq(&rel) > 1e-4f) {
+            D3DXVec3Normalize(&rel, &rel);
+            crate_vel_ += rel * 1.4f;
+        }
     }
 
     D3DXVECTOR3 to_b = boulder_pos_ - jeep_aabb.center;
@@ -621,9 +676,35 @@ void Game::DrawMiniMap(IDirect3DDevice9* device, int client_w, int client_h) {
         DrawQuad2D(device, mx - radius, my - radius, mx + radius, my + radius, color);
     };
 
-    draw_marker(crate_pos_, 2.5f, D3DCOLOR_ARGB(230, 255, 210, 80));
-    draw_marker(boulder_pos_, 2.8f, D3DCOLOR_ARGB(230, 255, 120, 120));
-    draw_marker(windmill_pos_, 2.5f, D3DCOLOR_ARGB(230, 120, 220, 255));
+    // Labels should live inside the minimap, next to each dot.
+    const auto draw_labeled_marker = [&](const D3DXVECTOR3& pos, float radius, DWORD color,
+                                         const wchar_t* label_text) {
+        float mx = 0.0f;
+        float my = 0.0f;
+        world_to_map(pos, &mx, &my);
+        DrawQuad2D(device, mx - radius, my - radius, mx + radius, my + radius, color);
+        if (font_ && label_text) {
+            const float pad = 3.0f;
+            const float label_w = 74.0f;
+            const float label_h = 16.0f;
+            float lx = mx + radius + pad;
+            float ly = my - label_h * 0.5f;
+            lx = std::clamp(lx, map_left + 2.0f, map_right - label_w - 2.0f);
+            ly = std::clamp(ly, map_top + 2.0f, map_bottom - label_h - 2.0f);
+            RECT trect{
+                static_cast<LONG>(lx),
+                static_cast<LONG>(ly),
+                static_cast<LONG>(lx + label_w),
+                static_cast<LONG>(ly + label_h),
+            };
+            font_->DrawTextW(nullptr, label_text, -1, &trect, DT_LEFT | DT_VCENTER | DT_SINGLELINE,
+                             D3DCOLOR_ARGB(235, 235, 245, 255));
+        }
+    };
+
+    draw_labeled_marker(crate_pos_, 2.5f, D3DCOLOR_ARGB(230, 255, 210, 80), L"Crate");
+    draw_labeled_marker(boulder_pos_, 2.8f, D3DCOLOR_ARGB(230, 255, 120, 120), L"Boulder");
+    draw_labeled_marker(windmill_pos_, 2.5f, D3DCOLOR_ARGB(230, 120, 220, 255), L"Windmill");
 
     const VehicleState& vs = vehicle_.State();
     float vx = 0.0f;
@@ -643,32 +724,13 @@ void Game::DrawMiniMap(IDirect3DDevice9* device, int client_w, int client_h) {
 
     if (font_) {
         RECT label{
-            static_cast<LONG>(map_left),
-            static_cast<LONG>(map_bottom + 4.0f),
-            static_cast<LONG>(map_right),
-            static_cast<LONG>(map_bottom + 26.0f),
+            static_cast<LONG>(map_left + 6.0f),
+            static_cast<LONG>(map_top + 4.0f),
+            static_cast<LONG>(map_right - 6.0f),
+            static_cast<LONG>(map_top + 22.0f),
         };
         font_->DrawTextW(nullptr, L"Mini map", -1, &label, DT_LEFT | DT_TOP,
                          D3DCOLOR_ARGB(230, 200, 230, 255));
-
-        const float legend_y = map_bottom + 22.0f;
-        DrawQuad2D(device, map_left, legend_y + 2.0f, map_left + 7.0f, legend_y + 9.0f,
-                   D3DCOLOR_ARGB(245, 80, 255, 120));
-        DrawQuad2D(device, map_left + 48.0f, legend_y + 2.0f, map_left + 55.0f, legend_y + 9.0f,
-                   D3DCOLOR_ARGB(230, 255, 210, 80));
-        DrawQuad2D(device, map_left + 98.0f, legend_y + 2.0f, map_left + 105.0f, legend_y + 9.0f,
-                   D3DCOLOR_ARGB(230, 255, 120, 120));
-        DrawQuad2D(device, map_left + 150.0f, legend_y + 2.0f, map_left + 157.0f, legend_y + 9.0f,
-                   D3DCOLOR_ARGB(230, 120, 220, 255));
-
-        RECT legend{
-            static_cast<LONG>(map_left + 9.0f),
-            static_cast<LONG>(map_bottom + 20.0f),
-            static_cast<LONG>(map_right + 84.0f),
-            static_cast<LONG>(map_bottom + 42.0f),
-        };
-        font_->DrawTextW(nullptr, L"You  Crate  Boulder  Windmill", -1, &legend, DT_LEFT | DT_TOP,
-                         D3DCOLOR_ARGB(225, 220, 230, 245));
     }
 }
 
@@ -712,7 +774,8 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
             D3DXMATRIX corr_tr;
             D3DXMATRIX wm_base;
             D3DXMATRIX wm_blades;
-            D3DXMatrixRotationX(&rot_blades, angle);
+            // Spin around the hub axis (local Z in our replacement OBJ path).
+            D3DXMatrixRotationZ(&rot_blades, angle);
             D3DXMatrixTranslation(&tr, windmill_pos_.x, windmill_pos_.y, windmill_pos_.z);
             D3DXMatrixMultiply(&corr_tr, &windmill_local_correction_, &tr);
             D3DXMATRIX tmp_blades;

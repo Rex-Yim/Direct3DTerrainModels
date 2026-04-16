@@ -53,6 +53,13 @@ void Vehicle::Update(float dt, float throttle, float steer, float brake, Terrain
     D3DXVECTOR3 fwd(std::sinf(s_.yaw), 0.f, std::cosf(s_.yaw));
     s_.position += fwd * (s_.speed * dt);
 
+    // Prevent leaving the heightfield (avoids driving into the void beyond the terrain edge).
+    constexpr float kEdgePad = 0.5f;
+    s_.position.x = std::clamp(s_.position.x, -terrain.HalfWidth() + kEdgePad,
+                               terrain.HalfWidth() - kEdgePad);
+    s_.position.z = std::clamp(s_.position.z, -terrain.HalfDepth() + kEdgePad,
+                               terrain.HalfDepth() - kEdgePad);
+
     const float ground = terrain.SampleHeight(s_.position.x, s_.position.z);
     s_.position.y = ground + 1.1f;
 }
