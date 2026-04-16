@@ -204,48 +204,9 @@ bool BuildWindmillStaticSplit(IDirect3DDevice9* device, ID3DXMesh* source, DWORD
         return false;
     }
 
-    // Heuristic split: the last material subset contains both the rotating sails and some
-    // near-hub/framework faces. A height cut can miss one sail; use radial distance from a
-    // derived hub pivot instead (sails are far; framework/hub is near).
-    D3DXVECTOR3 pivot(0.f, 0.f, 0.f);
-    for (const D3DXVECTOR3& c : subset_centroids) {
-        pivot += c;
-    }
-    pivot *= (1.f / static_cast<float>(subset_centroids.size()));
-
-    std::vector<float> dists;
-    dists.reserve(subset_centroids.size());
-    for (const D3DXVECTOR3& c : subset_centroids) {
-        const D3DXVECTOR3 d = c - pivot;
-        dists.push_back(d.x * d.x + d.y * d.y + d.z * d.z);
-    }
-    // Refine pivot from the closest 10% of faces (hub region).
-    const size_t hub_k = (std::max)(static_cast<size_t>(1), dists.size() / 10);
-    std::vector<float> dists_copy = dists;
-    std::nth_element(dists_copy.begin(), dists_copy.begin() + hub_k - 1, dists_copy.end());
-    const float hub_thresh = dists_copy[hub_k - 1];
-    D3DXVECTOR3 hub_accum(0.f, 0.f, 0.f);
-    size_t hub_count = 0;
-    for (size_t i = 0; i < subset_centroids.size(); ++i) {
-        if (dists[i] <= hub_thresh) {
-            hub_accum += subset_centroids[i];
-            ++hub_count;
-        }
-    }
-    if (hub_count > 0) {
-        pivot = hub_accum * (1.f / static_cast<float>(hub_count));
-    }
-
-    float min_d = FLT_MAX;
-    float max_d = 0.f;
-    for (const D3DXVECTOR3& c : subset_centroids) {
-        const D3DXVECTOR3 d = c - pivot;
-        const float dsq = d.x * d.x + d.y * d.y + d.z * d.z;
-        min_d = (std::min)(min_d, dsq);
-        max_d = (std::max)(max_d, dsq);
-    }
-    const float r_cut = min_d + (max_d - min_d) * 0.35f;
-
+    // Heuristic split: blade faces cluster around the high hub/sails region, while the
+    // wooden support framework is lower. Use the upper band of the last material subset.
+    const float y_cut = subset_min.y + (subset_max.y - subset_min.y) * 0.42f;
     D3DXVECTOR3 pivot_accum(0.f, 0.f, 0.f);
     DWORD pivot_count = 0;
     for (DWORD f = 0; f < face_count; ++f) {
@@ -260,9 +221,7 @@ bool BuildWindmillStaticSplit(IDirect3DDevice9* device, ID3DXMesh* source, DWORD
         const auto* p1 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i1);
         const auto* p2 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i2);
         const D3DXVECTOR3 c = (*p0 + *p1 + *p2) * (1.f / 3.f);
-        const D3DXVECTOR3 d = c - pivot;
-        const float dsq = d.x * d.x + d.y * d.y + d.z * d.z;
-        if (dsq >= r_cut) {
+        if (c.y >= y_cut) {
             blade_faces.push_back(f);
             pivot_accum += c;
             ++pivot_count;
@@ -323,8 +282,9 @@ bool BuildWindmillStaticSplit(IDirect3DDevice9* device, ID3DXMesh* source, DWORD
 
     const bool ok_base = build_mesh(base_faces, out_base_mesh);
     const bool ok_blade = build_mesh(blade_faces, out_blade_mesh);
-    // Use the refined hub pivot for rotation (more stable than averaging sail faces).
-    *out_blade_pivot = pivot;
+    if (pivot_count > 0) {
+        *out_blade_pivot = pivot_accum * (1.f / static_cast<float>(pivot_count));
+    }
 
     source->UnlockAttributeBuffer();
     source->UnlockIndexBuffer();
