@@ -232,6 +232,7 @@ Run \texttt{maeg4060\_stage2.exe} from \texttt{Game\_Build} with \texttt{Assets}
 \subsection{Quick troubleshooting}
 \begingroup\sloppy
 \begin{itemize}
+  \item Windows SmartScreen ``Windows protected your PC'': click \textbf{More info} then \textbf{Run anyway} (unsigned student executable).
   \item Missing D3DX DLL: install the legacy DirectX end-user runtime, or ship \texttt{D3DX9\_43.dll} next to the exe when the build copies it.
   \item Missing models or textures: keep \gh{Assets/}{Assets/} next to the executable (working directory must resolve relative paths).
   \item Blank screen after window resize: the sample calls font and device lost/reset around \texttt{IDirect3DDevice9::Reset}---confirm GPU drivers; see user guide if issues persist.

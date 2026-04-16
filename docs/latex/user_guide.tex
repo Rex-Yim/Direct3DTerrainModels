@@ -193,10 +193,27 @@ The windmill \textbf{plays automatically by default}. If the shipped windmill as
 
 \begin{itemize}
   \item \textbf{Missing DLLs / DirectX errors:} Repair or install the DirectX~9 end-user runtime; update the GPU driver.
+  \item \textbf{Windows protected your PC (SmartScreen):} This is expected for an unsigned student executable. Click \textbf{More info} then \textbf{Run anyway}.
   \item \textbf{Black screen or device creation failure:} Prefer windowed operation first, close other exclusive full-screen apps, then retry after a driver update.
   \item \textbf{Assets not found:} Run from the folder layout in Section~\ref{sec:launch}; verify \texttt{Assets/} sits beside the executable.
   \item \textbf{Gamepad ignored:} Prefer a wired connection or official wireless adapter; confirm Windows lists the device as XInput.
 \end{itemize}
+
+\begin{figure}[htbp]
+  \centering
+  \fcolorbox{AbstractFrame}{white}{%
+    \includegraphics[width=0.82\linewidth]{windows_smartscreen_more_info.png}}
+  \caption{Microsoft Defender SmartScreen: click \textbf{More info} to reveal the override option.}
+  \label{fig:smartscreen-moreinfo}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \fcolorbox{AbstractFrame}{white}{%
+    \includegraphics[width=0.62\linewidth]{windows_smartscreen_run_anyway.png}}
+  \caption{Microsoft Defender SmartScreen: click \textbf{Run anyway} to start \texttt{maeg4060\_stage2.exe}.}
+  \label{fig:smartscreen-runanyway}
+\end{figure}
 
 \section{Build from source (developers)}\sectionrule
 
