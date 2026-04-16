@@ -69,6 +69,19 @@ std::wstring HrHex(HRESULT hr) {
     return buffer;
 }
 
+void LogWindmillSplitSelection(DWORD materials_count, DWORD fallback_subset, DWORD detected_subset,
+                               bool split_ok, const D3DXVECTOR3& pivot_local) {
+    wchar_t msg[320];
+    swprintf_s(msg,
+               L"[windmill] materials=%lu fallback_subset=%lu detected_subset=%lu split_ok=%d "
+               L"pivot=(%.2f, %.2f, %.2f)\n",
+               static_cast<unsigned long>(materials_count),
+               static_cast<unsigned long>(fallback_subset),
+               static_cast<unsigned long>(detected_subset), split_ok ? 1 : 0, pivot_local.x,
+               pivot_local.y, pivot_local.z);
+    OutputDebugStringW(msg);
+}
+
 struct StaticModelLoadResult {
     HRESULT hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     std::filesystem::path resolved_path;
@@ -304,6 +317,106 @@ bool BuildWindmillStaticSplit(IDirect3DDevice9* device, ID3DXMesh* source, DWORD
     return true;
 }
 
+/** Pick the material subset whose upper-half faces sit furthest from the model center in XZ.
+ *  For windmills, that subset is typically the sails/blades rather than tower/platform meshes. */
+DWORD DetectWindmillBladeSubset(ID3DXMesh* source, DWORD fallback_subset) {
+    if (!source) {
+        return fallback_subset;
+    }
+    const DWORD face_count = source->GetNumFaces();
+    if (face_count == 0) {
+        return fallback_subset;
+    }
+
+    D3DXVECTOR3 mn;
+    D3DXVECTOR3 mx;
+    if (!ComputeMeshBounds(source, &mn, &mx)) {
+        return fallback_subset;
+    }
+    const D3DXVECTOR3 center = (mn + mx) * 0.5f;
+    const float y_mid = center.y;
+
+    const DWORD fvf = source->GetFVF();
+    const DWORD stride = D3DXGetFVFVertexSize(fvf);
+    if ((fvf & D3DFVF_XYZ) == 0 || stride < sizeof(D3DXVECTOR3)) {
+        return fallback_subset;
+    }
+
+    BYTE* vb = nullptr;
+    void* ib = nullptr;
+    DWORD* attrs = nullptr;
+    if (FAILED(source->LockVertexBuffer(D3DLOCK_READONLY, reinterpret_cast<void**>(&vb))) || !vb) {
+        return fallback_subset;
+    }
+    if (FAILED(source->LockIndexBuffer(D3DLOCK_READONLY, &ib)) || !ib) {
+        source->UnlockVertexBuffer();
+        return fallback_subset;
+    }
+    if (FAILED(source->LockAttributeBuffer(D3DLOCK_READONLY, &attrs)) || !attrs) {
+        source->UnlockIndexBuffer();
+        source->UnlockVertexBuffer();
+        return fallback_subset;
+    }
+
+    const bool use32 = (source->GetOptions() & D3DXMESH_32BIT) != 0;
+    const auto index_at = [&](DWORD i) -> DWORD {
+        return use32 ? static_cast<const DWORD*>(ib)[i] : static_cast<const WORD*>(ib)[i];
+    };
+
+    std::vector<float> radial_sum;
+    std::vector<DWORD> radial_count;
+    radial_sum.assign(32, 0.f);
+    radial_count.assign(32, 0u);
+
+    const auto ensure_subset = [&](DWORD subset) {
+        if (subset >= radial_sum.size()) {
+            radial_sum.resize(static_cast<size_t>(subset + 1u), 0.f);
+            radial_count.resize(static_cast<size_t>(subset + 1u), 0u);
+        }
+    };
+
+    for (DWORD f = 0; f < face_count; ++f) {
+        const DWORD subset = attrs[f];
+        ensure_subset(subset);
+        const DWORD i0 = index_at(f * 3 + 0);
+        const DWORD i1 = index_at(f * 3 + 1);
+        const DWORD i2 = index_at(f * 3 + 2);
+        const auto* p0 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i0);
+        const auto* p1 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i1);
+        const auto* p2 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i2);
+        const D3DXVECTOR3 c = (*p0 + *p1 + *p2) * (1.f / 3.f);
+        if (c.y < y_mid) {
+            continue;
+        }
+        const float dx = c.x - center.x;
+        const float dz = c.z - center.z;
+        const float radial = std::sqrt(dx * dx + dz * dz);
+        radial_sum[subset] += radial;
+        radial_count[subset] += 1u;
+    }
+
+    source->UnlockAttributeBuffer();
+    source->UnlockIndexBuffer();
+    source->UnlockVertexBuffer();
+
+    DWORD best_subset = fallback_subset;
+    float best_score = -1.f;
+    for (DWORD subset = 0; subset < static_cast<DWORD>(radial_sum.size()); ++subset) {
+        const DWORD count = radial_count[subset];
+        if (count < 8u) {
+            continue;
+        }
+        const float avg_radial = radial_sum[subset] / static_cast<float>(count);
+        // Slightly favor larger subsets so tiny decorative bits don't win.
+        const float score = avg_radial * (1.f + 0.08f * std::logf(static_cast<float>(count)));
+        if (score > best_score) {
+            best_score = score;
+            best_subset = subset;
+        }
+    }
+    return best_subset;
+}
+
 struct HudVertex {
     float x, y, z, rhw;
     DWORD color;
@@ -508,10 +621,16 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     }
     if (windmill_is_static_mesh_) {
         BuildReplacementMeshCorrection(windmill_static_.Mesh(), 22.f, 0.f, &windmill_local_correction_);
-        const DWORD blade_subset = windmill_static_.NumMaterials() > 0u ? (windmill_static_.NumMaterials() - 1u)
-                                                                        : 0u;
-        BuildWindmillStaticSplit(device, windmill_static_.Mesh(), blade_subset, &windmill_static_base_mesh_,
-                                 &windmill_static_blade_mesh_, &windmill_blade_pivot_local_);
+        const DWORD fallback_blade_subset =
+            windmill_static_.NumMaterials() > 0u ? (windmill_static_.NumMaterials() - 1u) : 0u;
+        const DWORD blade_subset =
+            DetectWindmillBladeSubset(windmill_static_.Mesh(), fallback_blade_subset);
+        const bool split_ok =
+            BuildWindmillStaticSplit(device, windmill_static_.Mesh(), blade_subset,
+                                     &windmill_static_base_mesh_, &windmill_static_blade_mesh_,
+                                     &windmill_blade_pivot_local_);
+        LogWindmillSplitSelection(windmill_static_.NumMaterials(), fallback_blade_subset,
+                                  blade_subset, split_ok, windmill_blade_pivot_local_);
     }
 
     if (FAILED(D3DXCreateFontW(device, 20, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET,
