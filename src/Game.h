@@ -59,7 +59,6 @@ private:
     bool windmill_loaded_ = false;
     bool windmill_is_static_mesh_ = false;
     bool windmill_has_animation_ = false;
-    bool windmill_anim_paused_ = false;
 
     /** Near vehicle spawn (~8, -18) so props are visible without a long drive. */
     D3DXVECTOR3 crate_pos_{12.f, 0.f, -8.f};

@@ -27,7 +27,7 @@ public:
     float SampleHeight(float world_x, float world_z) const;
     void SampleNormal(float world_x, float world_z, D3DXVECTOR3* out_normal) const;
 
-    void Draw(IDirect3DDevice9* device);
+    void Draw(IDirect3DDevice9* device, const D3DXMATRIX& view_proj);
 
     /** True when `Assets/terrain/heightmap_*.png` (etc.) was loaded for the heightfield. */
     bool UsingHeightmap() const { return heightmap_loaded_; }

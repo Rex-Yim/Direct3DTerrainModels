@@ -695,7 +695,7 @@ bool Terrain::Initialize(IDirect3DDevice9* device) {
     return true;
 }
 
-void Terrain::Draw(IDirect3DDevice9* device) {
+void Terrain::Draw(IDirect3DDevice9* device, const D3DXMATRIX& view_proj) {
     if (!device || !vb_ || !ib_ || !grass_tex_) {
         return;
     }
@@ -716,17 +716,19 @@ void Terrain::Draw(IDirect3DDevice9* device) {
     device->SetStreamSource(0, vb_, 0, sizeof(TerrainVertex));
     device->SetIndices(ib_);
 
-    D3DXMATRIX view{};
-    D3DXMATRIX proj{};
-    D3DXMATRIX vp{};
-    device->GetTransform(D3DTS_VIEW, &view);
-    device->GetTransform(D3DTS_PROJECTION, &proj);
-    D3DXMatrixMultiply(&vp, &view, &proj);
-
     D3DXPLANE frustum[6]{};
-    ExtractFrustumPlanes(vp, frustum);
+    ExtractFrustumPlanes(view_proj, frustum);
 
     const bool use_chunks = !chunks_.empty();
+    std::vector<const TerrainChunk*> visible_chunks;
+    if (use_chunks) {
+        visible_chunks.reserve(chunks_.size());
+        for (const TerrainChunk& ch : chunks_) {
+            if (ChunkIntersectsFrustum(ch, frustum)) {
+                visible_chunks.push_back(&ch);
+            }
+        }
+    }
 
     device->SetTexture(0, grass_tex_);
     device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
@@ -737,12 +739,9 @@ void Terrain::Draw(IDirect3DDevice9* device) {
     device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
 
     if (use_chunks) {
-        for (const TerrainChunk& ch : chunks_) {
-            if (!ChunkIntersectsFrustum(ch, frustum)) {
-                continue;
-            }
-            device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, ch.min_vertex_index, ch.vertex_count,
-                                         ch.start_index, ch.primitive_count);
+        for (const TerrainChunk* ch : visible_chunks) {
+            device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, ch->min_vertex_index, ch->vertex_count,
+                                         ch->start_index, ch->primitive_count);
         }
     } else {
         device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0,
@@ -750,7 +749,8 @@ void Terrain::Draw(IDirect3DDevice9* device) {
                                      num_indices_ / 3);
     }
 
-    const auto draw_alpha_splat = [this, device, use_chunks, &frustum](IDirect3DTexture9* tex,
+    const auto draw_alpha_splat = [this, device, use_chunks, &visible_chunks,
+                                   &frustum](IDirect3DTexture9* tex,
                                                                        IDirect3DVertexBuffer9* stream_vb) {
         if (!tex || !stream_vb) {
             return;
@@ -767,12 +767,9 @@ void Terrain::Draw(IDirect3DDevice9* device) {
         device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
         device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
         if (use_chunks) {
-            for (const TerrainChunk& ch : chunks_) {
-                if (!ChunkIntersectsFrustum(ch, frustum)) {
-                    continue;
-                }
-                device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, ch.min_vertex_index,
-                                             ch.vertex_count, ch.start_index, ch.primitive_count);
+            for (const TerrainChunk* ch : visible_chunks) {
+                device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, ch->min_vertex_index,
+                                             ch->vertex_count, ch->start_index, ch->primitive_count);
             }
         } else {
             device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0,

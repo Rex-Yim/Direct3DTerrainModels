@@ -53,9 +53,6 @@ void Vehicle::Update(float dt, float throttle, float steer, float brake, Terrain
     D3DXVECTOR3 fwd(std::sinf(s_.yaw), 0.f, std::cosf(s_.yaw));
     s_.position += fwd * (s_.speed * dt);
 
-    s_.position.x = std::clamp(s_.position.x, -terrain.HalfWidth() + 2.f, terrain.HalfWidth() - 2.f);
-    s_.position.z = std::clamp(s_.position.z, -terrain.HalfDepth() + 2.f, terrain.HalfDepth() - 2.f);
-
     const float ground = terrain.SampleHeight(s_.position.x, s_.position.z);
     s_.position.y = ground + 1.1f;
 }
@@ -64,7 +61,8 @@ void Vehicle::BuildWorldMatrix(Terrain& terrain, D3DXMATRIX* out_world) const {
     D3DXVECTOR3 n;
     terrain.SampleNormal(s_.position.x, s_.position.z, &n);
 
-    D3DXVECTOR3 fwd(std::sinf(s_.yaw), 0.f, std::cosf(s_.yaw));
+    // Model forward is opposite of our simulation forward; flip to match chase camera / movement.
+    D3DXVECTOR3 fwd(-std::sinf(s_.yaw), 0.f, -std::cosf(s_.yaw));
     D3DXVECTOR3 right;
     D3DXVec3Cross(&right, &fwd, &n);
     if (D3DXVec3LengthSq(&right) < 1e-8f) {

@@ -304,7 +304,6 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     windmill_is_static_mesh_ = false;
     windmill_loaded_ = false;
     windmill_has_animation_ = false;
-    windmill_anim_paused_ = false;
 
     const std::filesystem::path windmill_path = ResolveAssetPath(kWindmillPath);
     if (!windmill_path.empty()) {
@@ -362,7 +361,6 @@ void Game::Shutdown() {
     windmill_loaded_ = false;
     windmill_is_static_mesh_ = false;
     windmill_has_animation_ = false;
-    windmill_anim_paused_ = false;
     boulder_mesh_.Unload();
     crate_.Unload();
     jeep_.Unload();
@@ -388,9 +386,6 @@ void Game::OnResetDevice(IDirect3DDevice9* device) {
 
 void Game::Update(float dt, Graphics& graphics) {
     input_.Update();
-    if (input_.State().windmill_toggle) {
-        windmill_anim_paused_ = !windmill_anim_paused_;
-    }
     if (input_.State().quit) {
         wants_quit_ = true;
         PostQuitMessage(0);
@@ -440,7 +435,7 @@ void Game::Update(float dt, Graphics& graphics) {
 
     ResolveCollisions();
 
-    if (windmill_loaded_ && windmill_has_animation_ && !windmill_anim_paused_) {
+    if (windmill_loaded_ && windmill_has_animation_) {
         windmill_.AdvanceTime(dt);
     }
 }
@@ -529,9 +524,9 @@ void Game::DrawHud(IDirect3DDevice9* device, int client_w, int client_h) {
     const wchar_t* windmill_state = L"off";
     if (windmill_loaded_) {
         if (windmill_has_animation_) {
-            windmill_state = windmill_anim_paused_ ? L"paused" : L"anim";
+            windmill_state = L"anim";
         } else if (windmill_is_static_mesh_) {
-            windmill_state = windmill_anim_paused_ ? L"paused" : L"spin";
+            windmill_state = L"spin";
         } else {
             windmill_state = L"static";
         }
@@ -554,7 +549,7 @@ void Game::DrawHud(IDirect3DDevice9* device, int client_w, int client_h) {
     const wchar_t* wasd_overlay =
         L"W = forward      S = reverse\n"
         L"A = steer left   D = steer right\n"
-        L"Space = brake    Esc = quit    M = windmill\n"
+        L"Space = brake    Esc = quit\n"
         L"(Gamepad: steer / triggers)";
     const int overlay_h = 92;
     RECT rw{(std::max)(8, client_w - 460), (std::max)(8, client_h - overlay_h - 12), client_w - 14,
@@ -696,7 +691,9 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
     D3DXMATRIX id;
     D3DXMatrixIdentity(&id);
     device->SetTransform(D3DTS_WORLD, &id);
-    terrain_.Draw(device);
+    D3DXMATRIX vp;
+    D3DXMatrixMultiply(&vp, &camera.View(), &camera.Projection());
+    terrain_.Draw(device, vp);
 
     device->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
     device->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
@@ -709,7 +706,7 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
             // OBJ materials: 0=C4DMAT_Muehle (tower), 1=C4DMAT_sockel (base),
             // 2=C4DMAT_GelaenderWindrad (blade wheel). Rotate only the wheel around a horizontal axis;
             // a Y spin moved the whole mesh like a carousel and did not read as blade motion.
-            const float angle = windmill_anim_paused_ ? 0.f : static_cast<float>(sim_time_) * 0.65f;
+            const float angle = static_cast<float>(sim_time_) * 0.65f;
             D3DXMATRIX rot_blades;
             D3DXMATRIX tr;
             D3DXMATRIX corr_tr;

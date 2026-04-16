@@ -183,7 +183,7 @@ Table~\ref{tab:marking} maps typical final-stage submission themes from the cour
   \item Vehicle driving with steering, throttle/brake, and terrain-normal alignment.
   \item Windmill: hierarchical \texttt{.x} with \texttt{ID3DXAnimationController} when keyframed data is present; static mesh path uses subset draws / code-driven motion when animation sets are absent (\S\ref{sec:animation}).
   \item Collision with crate (AABB) and dynamic boulder (sphere, gravity, impulse).
-  \item HUD: smoothed FPS, speed, world position, simulation clock, windmill mode (animation vs.\ static spin vs.\ paused), terrain mode/splat summary, optional mini-map/legend; plus day/night lighting.
+  \item HUD: smoothed FPS, speed, world position, simulation clock, windmill mode (animation vs.\ static spin), terrain mode/splat summary, optional mini-map/legend; plus day/night lighting.
 \end{itemize}
 
 \subsection{Runtime screenshots}
@@ -221,7 +221,6 @@ Run \texttt{maeg4060\_stage2.exe} from \texttt{Game\_Build} with \texttt{Assets}
   W / S & Throttle forward / reverse \\
   A / D & Steer left / right \\
   Space & Brake \\
-  M & Pause / resume windmill animation \\
   Esc & Exit application \\
   \bottomrule
 \end{tabular}
@@ -260,7 +259,7 @@ Crate: AABB tests. Boulder: bounding sphere with gravity and simple impulses on 
 \subsection{Animation and rendering}
 \label{sec:animation}
 \textbf{Windmill.}\quad
-If the hierarchy load from \texttt{model\_windmill.x} succeeds and reports animation sets, \texttt{Game::Update} advances \texttt{ID3DXAnimationController} time each frame (unless paused with \texttt{M}). If loading falls back to static geometry (OBJ or static \texttt{.x}), the renderer uses mesh subset draws; sail motion may be driven in code for that path---not via the keyframed controller.
+If the hierarchy load from \texttt{model\_windmill.x} succeeds and reports animation sets, \texttt{Game::Update} advances \texttt{ID3DXAnimationController} time each frame. If loading falls back to static geometry (OBJ or static \texttt{.x}), the renderer uses mesh subset draws; sail motion is driven in code for that path---not via the keyframed controller.
 
 \medskip
 \noindent\textbf{Scene lighting.}\quad

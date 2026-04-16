@@ -160,7 +160,6 @@ This PDF explains how to \textbf{launch} the DirectX~9 sandbox, what \textbf{har
   W / S & Forward / reverse (throttle) \\
   A / D & Steer left / right \\
   Space & Brake (or hand brake, depending on build) \\
-  M & Pause / resume windmill motion (animation when present; otherwise simple spin) \\
   Esc & Exit the application \\
   \bottomrule
 \end{tabular}
@@ -185,6 +184,10 @@ Bindings follow the project implementation (\texttt{GetAsyncKeyState}). If your 
 
 \noindent
 Triggers approximate analog throttle; keyboard W/S remain digital.
+
+\subsection{Windmill behaviour (default)}
+\noindent
+The windmill \textbf{plays automatically by default}. If the shipped windmill asset contains keyframed animation data, the hierarchy animation is advanced each frame; otherwise the blades use a simple code-driven spin for the static mesh path.
 
 \section{Troubleshooting}\sectionrule
 
