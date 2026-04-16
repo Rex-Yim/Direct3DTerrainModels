@@ -765,9 +765,9 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
 
     if (windmill_loaded_) {
         if (windmill_is_static_mesh_) {
-            // OBJ materials: 0=C4DMAT_Muehle (tower), 1=C4DMAT_sockel (base),
-            // 2=C4DMAT_GelaenderWindrad (blade wheel). Rotate only the wheel around a horizontal axis;
-            // a Y spin moved the whole mesh like a carousel and did not read as blade motion.
+            // Rotate only the blade subset. In the replacement OBJ, the blade material is last
+            // (MTL also carries a leading C4DMAT_NONE entry), so using a hard-coded "2" can
+            // accidentally rotate a non-blade subset and make the whole windmill look wrong.
             const float angle = static_cast<float>(sim_time_) * 0.65f;
             D3DXMATRIX rot_blades;
             D3DXMATRIX tr;
@@ -784,10 +784,10 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
             wm_base = corr_tr;
 
             const DWORD n_sub = windmill_static_.NumMaterials();
-            constexpr DWORD kBladeSubset = 2u;
-            if (n_sub > kBladeSubset) {
+            const DWORD blade_subset = (n_sub > 0u) ? (n_sub - 1u) : 0u;
+            if (n_sub > blade_subset) {
                 for (DWORD s = 0; s < n_sub; ++s) {
-                    if (s == kBladeSubset) {
+                    if (s == blade_subset) {
                         device->SetTransform(D3DTS_WORLD, &wm_blades);
                     } else {
                         device->SetTransform(D3DTS_WORLD, &wm_base);
