@@ -1020,8 +1020,7 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
                 D3DXMatrixRotationZ(&rot_blades, angle);
                 D3DXMatrixMultiply(&local_rot, &pivot_to_origin, &rot_blades);
                 D3DXMatrixMultiply(&local_rot, &local_rot, &pivot_back);
-                // Apply the same local correction as the base, then rotate about the pivot.
-                D3DXMatrixMultiply(&corrected_rot, &windmill_local_correction_, &local_rot);
+                D3DXMatrixMultiply(&corrected_rot, &local_rot, &windmill_local_correction_);
                 D3DXMatrixMultiply(&wm_blades, &corrected_rot, &tr);
                 device->SetTransform(D3DTS_WORLD, &wm_blades);
                 windmill_static_.DrawWithMaterials(device, windmill_static_blade_mesh_);
