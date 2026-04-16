@@ -2,6 +2,7 @@
 
 #include <array>
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -125,6 +126,182 @@ void BuildReplacementMeshCorrection(ID3DXMesh* mesh, float target_max_extent, fl
     D3DXMatrixScaling(&sc, scale, scale, scale);
     D3DXMatrixTranslation(&tr, -center.x, -mn.y + (bottom_y_offset / scale), -center.z);
     D3DXMatrixMultiply(out, &tr, &sc);
+}
+
+bool BuildWindmillStaticSplit(IDirect3DDevice9* device, ID3DXMesh* source, DWORD blade_subset,
+                              ID3DXMesh** out_base_mesh, ID3DXMesh** out_blade_mesh,
+                              D3DXVECTOR3* out_blade_pivot) {
+    if (!device || !source || !out_base_mesh || !out_blade_mesh || !out_blade_pivot) {
+        return false;
+    }
+    *out_base_mesh = nullptr;
+    *out_blade_mesh = nullptr;
+    *out_blade_pivot = D3DXVECTOR3(0.f, 0.f, 0.f);
+
+    const DWORD fvf = source->GetFVF();
+    const DWORD stride = D3DXGetFVFVertexSize(fvf);
+    if ((fvf & D3DFVF_XYZ) == 0 || stride < sizeof(D3DXVECTOR3)) {
+        return false;
+    }
+
+    BYTE* vb = nullptr;
+    void* ib = nullptr;
+    DWORD* attrs = nullptr;
+    if (FAILED(source->LockVertexBuffer(D3DLOCK_READONLY, reinterpret_cast<void**>(&vb))) || !vb) {
+        return false;
+    }
+    if (FAILED(source->LockIndexBuffer(D3DLOCK_READONLY, &ib)) || !ib) {
+        source->UnlockVertexBuffer();
+        return false;
+    }
+    if (FAILED(source->LockAttributeBuffer(D3DLOCK_READONLY, &attrs)) || !attrs) {
+        source->UnlockIndexBuffer();
+        source->UnlockVertexBuffer();
+        return false;
+    }
+
+    const DWORD face_count = source->GetNumFaces();
+    const DWORD vertex_count = source->GetNumVertices();
+    const bool use32 = (source->GetOptions() & D3DXMESH_32BIT) != 0;
+    std::vector<DWORD> base_faces;
+    std::vector<DWORD> blade_faces;
+    base_faces.reserve(face_count);
+    blade_faces.reserve(face_count / 2);
+
+    D3DXVECTOR3 subset_min(FLT_MAX, FLT_MAX, FLT_MAX);
+    D3DXVECTOR3 subset_max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    std::vector<D3DXVECTOR3> subset_centroids;
+    subset_centroids.reserve(face_count);
+
+    const auto index_at = [&](DWORD i) -> DWORD {
+        return use32 ? static_cast<const DWORD*>(ib)[i] : static_cast<const WORD*>(ib)[i];
+    };
+
+    for (DWORD f = 0; f < face_count; ++f) {
+        if (attrs[f] != blade_subset) {
+            continue;
+        }
+        const DWORD i0 = index_at(f * 3 + 0);
+        const DWORD i1 = index_at(f * 3 + 1);
+        const DWORD i2 = index_at(f * 3 + 2);
+        const auto* p0 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i0);
+        const auto* p1 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i1);
+        const auto* p2 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i2);
+        const D3DXVECTOR3 c = (*p0 + *p1 + *p2) * (1.f / 3.f);
+        subset_centroids.push_back(c);
+        subset_min.x = (std::min)(subset_min.x, c.x);
+        subset_min.y = (std::min)(subset_min.y, c.y);
+        subset_min.z = (std::min)(subset_min.z, c.z);
+        subset_max.x = (std::max)(subset_max.x, c.x);
+        subset_max.y = (std::max)(subset_max.y, c.y);
+        subset_max.z = (std::max)(subset_max.z, c.z);
+    }
+
+    if (subset_centroids.empty()) {
+        source->UnlockAttributeBuffer();
+        source->UnlockIndexBuffer();
+        source->UnlockVertexBuffer();
+        return false;
+    }
+
+    // Heuristic split: blade faces cluster around the high hub/sails region, while the
+    // wooden support framework is lower. Use the upper band of the last material subset.
+    const float y_cut = subset_min.y + (subset_max.y - subset_min.y) * 0.42f;
+    D3DXVECTOR3 pivot_accum(0.f, 0.f, 0.f);
+    DWORD pivot_count = 0;
+    for (DWORD f = 0; f < face_count; ++f) {
+        if (attrs[f] != blade_subset) {
+            base_faces.push_back(f);
+            continue;
+        }
+        const DWORD i0 = index_at(f * 3 + 0);
+        const DWORD i1 = index_at(f * 3 + 1);
+        const DWORD i2 = index_at(f * 3 + 2);
+        const auto* p0 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i0);
+        const auto* p1 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i1);
+        const auto* p2 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i2);
+        const D3DXVECTOR3 c = (*p0 + *p1 + *p2) * (1.f / 3.f);
+        if (c.y >= y_cut) {
+            blade_faces.push_back(f);
+            pivot_accum += c;
+            ++pivot_count;
+        } else {
+            base_faces.push_back(f);
+        }
+    }
+
+    const auto build_mesh = [&](const std::vector<DWORD>& faces, ID3DXMesh** out_mesh) -> bool {
+        if (!out_mesh || faces.empty()) {
+            return false;
+        }
+        ID3DXMesh* mesh = nullptr;
+        if (FAILED(D3DXCreateMeshFVF(static_cast<DWORD>(faces.size()), vertex_count, source->GetOptions(),
+                                     fvf, device, &mesh)) || !mesh) {
+            return false;
+        }
+        void* out_vb = nullptr;
+        if (FAILED(mesh->LockVertexBuffer(0, &out_vb))) {
+            mesh->Release();
+            return false;
+        }
+        std::memcpy(out_vb, vb, stride * static_cast<size_t>(vertex_count));
+        mesh->UnlockVertexBuffer();
+
+        void* out_ib = nullptr;
+        if (FAILED(mesh->LockIndexBuffer(0, &out_ib))) {
+            mesh->Release();
+            return false;
+        }
+        DWORD* out_attr = nullptr;
+        if (FAILED(mesh->LockAttributeBuffer(0, &out_attr))) {
+            mesh->UnlockIndexBuffer();
+            mesh->Release();
+            return false;
+        }
+        for (size_t j = 0; j < faces.size(); ++j) {
+            const DWORD f = faces[j];
+            const DWORD src_base = f * 3;
+            if (use32) {
+                auto* dst = static_cast<DWORD*>(out_ib);
+                dst[j * 3 + 0] = index_at(src_base + 0);
+                dst[j * 3 + 1] = index_at(src_base + 1);
+                dst[j * 3 + 2] = index_at(src_base + 2);
+            } else {
+                auto* dst = static_cast<WORD*>(out_ib);
+                dst[j * 3 + 0] = static_cast<WORD>(index_at(src_base + 0));
+                dst[j * 3 + 1] = static_cast<WORD>(index_at(src_base + 1));
+                dst[j * 3 + 2] = static_cast<WORD>(index_at(src_base + 2));
+            }
+            out_attr[j] = attrs[f];
+        }
+        mesh->UnlockAttributeBuffer();
+        mesh->UnlockIndexBuffer();
+        *out_mesh = mesh;
+        return true;
+    };
+
+    const bool ok_base = build_mesh(base_faces, out_base_mesh);
+    const bool ok_blade = build_mesh(blade_faces, out_blade_mesh);
+    if (pivot_count > 0) {
+        *out_blade_pivot = pivot_accum * (1.f / static_cast<float>(pivot_count));
+    }
+
+    source->UnlockAttributeBuffer();
+    source->UnlockIndexBuffer();
+    source->UnlockVertexBuffer();
+
+    if (!ok_base || !ok_blade) {
+        if (*out_base_mesh) {
+            (*out_base_mesh)->Release();
+            *out_base_mesh = nullptr;
+        }
+        if (*out_blade_mesh) {
+            (*out_blade_mesh)->Release();
+            *out_blade_mesh = nullptr;
+        }
+        return false;
+    }
+    return true;
 }
 
 struct HudVertex {
@@ -304,6 +481,9 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     windmill_is_static_mesh_ = false;
     windmill_loaded_ = false;
     windmill_has_animation_ = false;
+    windmill_static_base_mesh_ = nullptr;
+    windmill_static_blade_mesh_ = nullptr;
+    windmill_blade_pivot_local_ = D3DXVECTOR3(0.f, 0.f, 0.f);
 
     const std::filesystem::path windmill_path = ResolveAssetPath(kWindmillPath);
     if (!windmill_path.empty()) {
@@ -328,6 +508,10 @@ bool Game::Initialize(HWND hwnd, IDirect3DDevice9* device) {
     }
     if (windmill_is_static_mesh_) {
         BuildReplacementMeshCorrection(windmill_static_.Mesh(), 22.f, 0.f, &windmill_local_correction_);
+        const DWORD blade_subset = windmill_static_.NumMaterials() > 0u ? (windmill_static_.NumMaterials() - 1u)
+                                                                        : 0u;
+        BuildWindmillStaticSplit(device, windmill_static_.Mesh(), blade_subset, &windmill_static_base_mesh_,
+                                 &windmill_static_blade_mesh_, &windmill_blade_pivot_local_);
     }
 
     if (FAILED(D3DXCreateFontW(device, 20, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET,
@@ -358,6 +542,14 @@ void Game::Shutdown() {
     }
     windmill_.Release();
     windmill_static_.Unload();
+    if (windmill_static_base_mesh_) {
+        windmill_static_base_mesh_->Release();
+        windmill_static_base_mesh_ = nullptr;
+    }
+    if (windmill_static_blade_mesh_) {
+        windmill_static_blade_mesh_->Release();
+        windmill_static_blade_mesh_ = nullptr;
+    }
     windmill_loaded_ = false;
     windmill_is_static_mesh_ = false;
     windmill_has_animation_ = false;
@@ -765,37 +957,35 @@ void Game::Render(IDirect3DDevice9* device, Camera& camera, int client_w, int cl
 
     if (windmill_loaded_) {
         if (windmill_is_static_mesh_) {
-            // Rotate only the blade subset. In the replacement OBJ, the blade material is last
-            // (MTL also carries a leading C4DMAT_NONE entry), so using a hard-coded "2" can
-            // accidentally rotate a non-blade subset and make the whole windmill look wrong.
             const float angle = static_cast<float>(sim_time_) * 0.65f;
-            D3DXMATRIX rot_blades;
             D3DXMATRIX tr;
-            D3DXMATRIX corr_tr;
             D3DXMATRIX wm_base;
-            D3DXMATRIX wm_blades;
-            // Spin around the hub axis (local Z in our replacement OBJ path).
-            D3DXMatrixRotationZ(&rot_blades, angle);
             D3DXMatrixTranslation(&tr, windmill_pos_.x, windmill_pos_.y, windmill_pos_.z);
-            D3DXMatrixMultiply(&corr_tr, &windmill_local_correction_, &tr);
-            D3DXMATRIX tmp_blades;
-            D3DXMatrixMultiply(&tmp_blades, &windmill_local_correction_, &rot_blades);
-            D3DXMatrixMultiply(&wm_blades, &tmp_blades, &tr);
-            wm_base = corr_tr;
+            D3DXMatrixMultiply(&wm_base, &windmill_local_correction_, &tr);
 
-            const DWORD n_sub = windmill_static_.NumMaterials();
-            const DWORD blade_subset = (n_sub > 0u) ? (n_sub - 1u) : 0u;
-            if (n_sub > blade_subset) {
-                for (DWORD s = 0; s < n_sub; ++s) {
-                    if (s == blade_subset) {
-                        device->SetTransform(D3DTS_WORLD, &wm_blades);
-                    } else {
-                        device->SetTransform(D3DTS_WORLD, &wm_base);
-                    }
-                    windmill_static_.DrawSubset(device, s);
-                }
-            } else {
+            if (windmill_static_base_mesh_ && windmill_static_blade_mesh_) {
+                device->SetTransform(D3DTS_WORLD, &wm_base);
+                windmill_static_.DrawWithMaterials(device, windmill_static_base_mesh_);
+
+                D3DXMATRIX pivot_to_origin;
+                D3DXMATRIX pivot_back;
+                D3DXMATRIX rot_blades;
+                D3DXMATRIX local_rot;
+                D3DXMATRIX corrected_rot;
+                D3DXMATRIX wm_blades;
+                D3DXMatrixTranslation(&pivot_to_origin, -windmill_blade_pivot_local_.x,
+                                      -windmill_blade_pivot_local_.y, -windmill_blade_pivot_local_.z);
+                D3DXMatrixTranslation(&pivot_back, windmill_blade_pivot_local_.x,
+                                      windmill_blade_pivot_local_.y, windmill_blade_pivot_local_.z);
+                D3DXMatrixRotationZ(&rot_blades, angle);
+                D3DXMatrixMultiply(&local_rot, &pivot_to_origin, &rot_blades);
+                D3DXMatrixMultiply(&local_rot, &local_rot, &pivot_back);
+                D3DXMatrixMultiply(&corrected_rot, &local_rot, &windmill_local_correction_);
+                D3DXMatrixMultiply(&wm_blades, &corrected_rot, &tr);
                 device->SetTransform(D3DTS_WORLD, &wm_blades);
+                windmill_static_.DrawWithMaterials(device, windmill_static_blade_mesh_);
+            } else {
+                device->SetTransform(D3DTS_WORLD, &wm_base);
                 windmill_static_.Draw(device);
             }
         } else {

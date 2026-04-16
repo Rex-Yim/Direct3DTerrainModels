@@ -56,6 +56,9 @@ private:
     /** Used when D3DXLoadMeshHierarchyFromX fails but the same asset loads as a plain mesh. */
     ModelLoader windmill_static_;
     D3DXMATRIX windmill_local_correction_{};
+    ID3DXMesh* windmill_static_base_mesh_ = nullptr;
+    ID3DXMesh* windmill_static_blade_mesh_ = nullptr;
+    D3DXVECTOR3 windmill_blade_pivot_local_{0.f, 0.f, 0.f};
     bool windmill_loaded_ = false;
     bool windmill_is_static_mesh_ = false;
     bool windmill_has_animation_ = false;

@@ -34,6 +34,8 @@ public:
     void Draw(IDirect3DDevice9* device) const;
     /** Draw a single material subset (for split world transforms, e.g. rotating sails only). */
     void DrawSubset(IDirect3DDevice9* device, DWORD subset_index) const;
+    /** Draw an arbitrary mesh using this loader's material/texture table. */
+    void DrawWithMaterials(IDirect3DDevice9* device, ID3DXMesh* mesh) const;
 
     void Unload() { Release(); }
 

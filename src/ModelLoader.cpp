@@ -874,17 +874,21 @@ HRESULT ModelLoader::LoadFromFile(IDirect3DDevice9* device, const wchar_t* path)
 }
 
 void ModelLoader::Draw(IDirect3DDevice9* device) const {
-    if (!device || !mesh_) {
+    DrawWithMaterials(device, mesh_);
+}
+
+void ModelLoader::DrawWithMaterials(IDirect3DDevice9* device, ID3DXMesh* mesh) const {
+    if (!device || !mesh) {
         return;
     }
 
-    device->SetFVF(mesh_->GetFVF());
+    device->SetFVF(mesh->GetFVF());
 
     if (materials_.empty()) {
         D3DMATERIAL9 material = MakeDefaultMaterial();
         device->SetMaterial(&material);
         device->SetTexture(0, nullptr);
-        mesh_->DrawSubset(0);
+        mesh->DrawSubset(0);
         return;
     }
 
@@ -892,7 +896,7 @@ void ModelLoader::Draw(IDirect3DDevice9* device) const {
     for (DWORD i = 0; i < subset_count; ++i) {
         device->SetMaterial(&materials_[i]);
         device->SetTexture(0, textures_[i]);
-        mesh_->DrawSubset(i);
+        mesh->DrawSubset(i);
     }
     device->SetTexture(0, nullptr);
 }
