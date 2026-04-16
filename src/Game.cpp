@@ -216,30 +216,27 @@ bool BuildWindmillStaticSplit(IDirect3DDevice9* device, ID3DXMesh* source, DWORD
         metrics.push_back(FaceMetric{f, c, radial});
     }
 
-    // Start from the detected subset, then isolate only the upper sail region so support
-    // framework faces in the same subset do not rotate.
+    // Split the detected blade subset into:
+    //  - rotating outer sail faces
+    //  - static inner support/hub/wood faces
+    // This keeps full sails spinning while preventing tower/wood scaffold drift.
     D3DXVECTOR3 pivot_accum(0.f, 0.f, 0.f);
     DWORD pivot_count = 0;
     D3DXVECTOR3 subset_min(FLT_MAX, FLT_MAX, FLT_MAX);
     D3DXVECTOR3 subset_max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-    bool subset_seen = false;
-    D3DXVECTOR3 subset_center(0.f, 0.f, 0.f);
+    D3DXVECTOR3 subset_center_accum(0.f, 0.f, 0.f);
     DWORD subset_face_count = 0;
-    float max_subset_radial = 0.f;
-
-    std::vector<FaceMetric> subset_faces;
-    subset_faces.reserve(face_count / 2);
+    bool subset_seen = false;
     for (const FaceMetric& m : metrics) {
         if (attrs[m.face] == blade_subset) {
             subset_seen = true;
-            subset_faces.push_back(m);
             subset_min.x = (std::min)(subset_min.x, m.centroid.x);
             subset_min.y = (std::min)(subset_min.y, m.centroid.y);
             subset_min.z = (std::min)(subset_min.z, m.centroid.z);
             subset_max.x = (std::max)(subset_max.x, m.centroid.x);
             subset_max.y = (std::max)(subset_max.y, m.centroid.y);
             subset_max.z = (std::max)(subset_max.z, m.centroid.z);
-            subset_center += m.centroid;
+            subset_center_accum += m.centroid;
             ++subset_face_count;
         } else {
             base_faces.push_back(m.face);
@@ -247,38 +244,61 @@ bool BuildWindmillStaticSplit(IDirect3DDevice9* device, ID3DXMesh* source, DWORD
     }
 
     if (subset_seen) {
-        subset_center *= (1.f / static_cast<float>(subset_face_count));
-        for (const FaceMetric& m : subset_faces) {
+        const D3DXVECTOR3 subset_center =
+            subset_center_accum * (1.f / static_cast<float>((std::max)(1u, subset_face_count)));
+        float max_radial = 0.f;
+        for (const FaceMetric& m : metrics) {
+            if (attrs[m.face] != blade_subset) {
+                continue;
+            }
             const float dx = m.centroid.x - subset_center.x;
             const float dz = m.centroid.z - subset_center.z;
-            const float radial = std::sqrt(dx * dx + dz * dz);
-            max_subset_radial = (std::max)(max_subset_radial, radial);
+            const float r = std::sqrt(dx * dx + dz * dz);
+            max_radial = (std::max)(max_radial, r);
         }
 
-        const float y_cut = subset_min.y + (subset_max.y - subset_min.y) * 0.62f;
-        const float radial_cut = max_subset_radial * 0.30f;
-        for (const FaceMetric& m : subset_faces) {
+        const float y_cut = subset_min.y + (subset_max.y - subset_min.y) * 0.42f;
+        const float blade_radial_cut = max_radial * 0.52f;
+        const float hub_radial_cut = max_radial * 0.28f;
+        for (const FaceMetric& m : metrics) {
+            if (attrs[m.face] != blade_subset) {
+                continue;
+            }
             const float dx = m.centroid.x - subset_center.x;
             const float dz = m.centroid.z - subset_center.z;
-            const float radial = std::sqrt(dx * dx + dz * dz);
-            if (m.centroid.y >= y_cut && radial >= radial_cut) {
+            const float r = std::sqrt(dx * dx + dz * dz);
+
+            if (m.centroid.y >= y_cut && r >= blade_radial_cut) {
                 blade_faces.push_back(m.face);
-                pivot_accum += m.centroid;
-                ++pivot_count;
             } else {
                 base_faces.push_back(m.face);
             }
-        }
-    }
 
-    // Safety fallback: if filtering is too aggressive, rotate full subset to keep all sails.
-    if (subset_seen && blade_faces.size() < subset_faces.size() / 4u) {
-        for (const FaceMetric& m : subset_faces) {
-            blade_faces.push_back(m.face);
+            if (r <= hub_radial_cut || m.centroid.y >= y_cut) {
+                pivot_accum += m.centroid;
+                ++pivot_count;
+            }
         }
-        for (const FaceMetric& m : subset_faces) {
-            pivot_accum += m.centroid;
-            ++pivot_count;
+
+        // If filter is too strict on a particular export, fall back to rotating the full subset.
+        if (blade_faces.size() < 64u) {
+            blade_faces.clear();
+            base_faces.clear();
+            pivot_accum = D3DXVECTOR3(0.f, 0.f, 0.f);
+            pivot_count = 0;
+            for (const FaceMetric& m : metrics) {
+                if (attrs[m.face] == blade_subset) {
+                    blade_faces.push_back(m.face);
+                    pivot_accum += m.centroid;
+                    ++pivot_count;
+                } else {
+                    base_faces.push_back(m.face);
+                }
+            }
+        }
+    } else {
+        for (const FaceMetric& m : metrics) {
+            base_faces.push_back(m.face);
         }
     }
 
