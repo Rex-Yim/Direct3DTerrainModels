@@ -181,52 +181,29 @@ bool BuildWindmillStaticSplit(IDirect3DDevice9* device, ID3DXMesh* source, DWORD
     base_faces.reserve(face_count);
     blade_faces.reserve(face_count / 2);
 
-    D3DXVECTOR3 subset_min(FLT_MAX, FLT_MAX, FLT_MAX);
-    D3DXVECTOR3 subset_max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-    std::vector<D3DXVECTOR3> subset_centroids;
-    subset_centroids.reserve(face_count);
-
-    const auto index_at = [&](DWORD i) -> DWORD {
-        return use32 ? static_cast<const DWORD*>(ib)[i] : static_cast<const WORD*>(ib)[i];
-    };
-
-    for (DWORD f = 0; f < face_count; ++f) {
-        if (attrs[f] != blade_subset) {
-            continue;
-        }
-        const DWORD i0 = index_at(f * 3 + 0);
-        const DWORD i1 = index_at(f * 3 + 1);
-        const DWORD i2 = index_at(f * 3 + 2);
-        const auto* p0 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i0);
-        const auto* p1 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i1);
-        const auto* p2 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i2);
-        const D3DXVECTOR3 c = (*p0 + *p1 + *p2) * (1.f / 3.f);
-        subset_centroids.push_back(c);
-        subset_min.x = (std::min)(subset_min.x, c.x);
-        subset_min.y = (std::min)(subset_min.y, c.y);
-        subset_min.z = (std::min)(subset_min.z, c.z);
-        subset_max.x = (std::max)(subset_max.x, c.x);
-        subset_max.y = (std::max)(subset_max.y, c.y);
-        subset_max.z = (std::max)(subset_max.z, c.z);
-    }
-
-    if (subset_centroids.empty()) {
+    D3DXVECTOR3 mesh_min(FLT_MAX, FLT_MAX, FLT_MAX);
+    D3DXVECTOR3 mesh_max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    if (!ComputeMeshBounds(source, &mesh_min, &mesh_max)) {
         source->UnlockAttributeBuffer();
         source->UnlockIndexBuffer();
         source->UnlockVertexBuffer();
         return false;
     }
+    const D3DXVECTOR3 mesh_center = (mesh_min + mesh_max) * 0.5f;
+    const float y_mid = mesh_center.y;
 
-    // Heuristic split: blade faces cluster around the high hub/sails region, while the
-    // wooden support framework is lower. Use the upper band of the last material subset.
-    const float y_cut = subset_min.y + (subset_max.y - subset_min.y) * 0.42f;
-    D3DXVECTOR3 pivot_accum(0.f, 0.f, 0.f);
-    DWORD pivot_count = 0;
+    const auto index_at = [&](DWORD i) -> DWORD {
+        return use32 ? static_cast<const DWORD*>(ib)[i] : static_cast<const WORD*>(ib)[i];
+    };
+    struct FaceMetric {
+        DWORD face = 0;
+        D3DXVECTOR3 centroid = D3DXVECTOR3(0.f, 0.f, 0.f);
+        float radial = 0.f;
+    };
+    std::vector<FaceMetric> metrics;
+    metrics.reserve(face_count);
+    float max_upper_radial = 0.f;
     for (DWORD f = 0; f < face_count; ++f) {
-        if (attrs[f] != blade_subset) {
-            base_faces.push_back(f);
-            continue;
-        }
         const DWORD i0 = index_at(f * 3 + 0);
         const DWORD i1 = index_at(f * 3 + 1);
         const DWORD i2 = index_at(f * 3 + 2);
@@ -234,12 +211,68 @@ bool BuildWindmillStaticSplit(IDirect3DDevice9* device, ID3DXMesh* source, DWORD
         const auto* p1 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i1);
         const auto* p2 = reinterpret_cast<const D3DXVECTOR3*>(vb + stride * i2);
         const D3DXVECTOR3 c = (*p0 + *p1 + *p2) * (1.f / 3.f);
-        if (c.y >= y_cut) {
-            blade_faces.push_back(f);
-            pivot_accum += c;
+        const float dx = c.x - mesh_center.x;
+        const float dz = c.z - mesh_center.z;
+        const float radial = std::sqrt(dx * dx + dz * dz);
+        metrics.push_back(FaceMetric{f, c, radial});
+        if (c.y >= y_mid) {
+            max_upper_radial = (std::max)(max_upper_radial, radial);
+        }
+    }
+
+    // Primary geometry split:
+    //  - blades are typically above center height
+    //  - and far from central shaft in XZ.
+    const float radial_cut = max_upper_radial * 0.56f;
+    D3DXVECTOR3 pivot_accum(0.f, 0.f, 0.f);
+    DWORD pivot_count = 0;
+    for (const FaceMetric& m : metrics) {
+        if (m.centroid.y >= y_mid && m.radial >= radial_cut) {
+            blade_faces.push_back(m.face);
+            pivot_accum += m.centroid;
             ++pivot_count;
+            continue;
+        }
+        base_faces.push_back(m.face);
+    }
+
+    // Safety fallback for unusual exports: keep old subset-guided behavior.
+    if (blade_faces.size() < face_count / 20u) {
+        base_faces.clear();
+        blade_faces.clear();
+        pivot_accum = D3DXVECTOR3(0.f, 0.f, 0.f);
+        pivot_count = 0;
+
+        D3DXVECTOR3 subset_min(FLT_MAX, FLT_MAX, FLT_MAX);
+        D3DXVECTOR3 subset_max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+        bool subset_seen = false;
+        for (const FaceMetric& m : metrics) {
+            if (attrs[m.face] != blade_subset) {
+                continue;
+            }
+            subset_seen = true;
+            subset_min.x = (std::min)(subset_min.x, m.centroid.x);
+            subset_min.y = (std::min)(subset_min.y, m.centroid.y);
+            subset_min.z = (std::min)(subset_min.z, m.centroid.z);
+            subset_max.x = (std::max)(subset_max.x, m.centroid.x);
+            subset_max.y = (std::max)(subset_max.y, m.centroid.y);
+            subset_max.z = (std::max)(subset_max.z, m.centroid.z);
+        }
+        if (subset_seen) {
+            const float y_cut = subset_min.y + (subset_max.y - subset_min.y) * 0.42f;
+            for (const FaceMetric& m : metrics) {
+                if (attrs[m.face] == blade_subset && m.centroid.y >= y_cut) {
+                    blade_faces.push_back(m.face);
+                    pivot_accum += m.centroid;
+                    ++pivot_count;
+                } else {
+                    base_faces.push_back(m.face);
+                }
+            }
         } else {
-            base_faces.push_back(f);
+            for (const FaceMetric& m : metrics) {
+                base_faces.push_back(m.face);
+            }
         }
     }
 
